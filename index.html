@@ -153,7 +153,8 @@ footer button{padding:2px 8px}
 #xfPanel #xKx,#xfPanel #xKy{width:50px}
 #xfPanel .btns button{padding:4px 6px}
 /* 내 작업 */
-#bWorks.warn{border-color:var(--danger);color:var(--danger)}
+#bCloud.pending{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+#bCloud.warn,#bWorks.warn{border-color:var(--danger);color:var(--danger)}
 .works{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:10px;max-height:44vh;overflow:auto;margin:10px 0}
 .work{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--panel2);cursor:pointer;display:flex;flex-direction:column;gap:4px}
 .work:hover{border-color:#5a5e6b}
@@ -184,7 +185,7 @@ footer button{padding:2px 8px}
       <hr>
       <button data-act="new">새로 만들기</button>
       <button data-act="open">파일 열기 (.pxproj, 그림)…<kbd>⌘O</kbd></button>
-      <button data-act="save">파일로 저장 (.pxproj)<kbd>⌘S</kbd></button>
+      <button data-act="save">파일로 저장 (.pxproj)</button>
       <button data-act="saveas">다른 이름으로 파일 저장…<kbd>⇧⌘S</kbd></button>
       <hr>
       <button data-act="import">불러와 합치기…</button>
@@ -199,6 +200,7 @@ footer button{padding:2px 8px}
     </div>
   </div>
   <button id="bWorks" title="이 기기에 저장된 작업 목록 · GitHub 동기화">내 작업</button>
+  <button id="bCloud" title="GitHub에 올리고 다른 기기 것 받기 (⌘S)">☁ 저장</button>
   <button id="bAnim" title="애니메이션 타임라인 켜기/끄기 (⇧T)">애니메이션</button>
   <span class="sep"></span>
   <button id="bUndo" title="실행취소 (⌘Z)">↶ 취소</button>
@@ -324,7 +326,7 @@ footer button{padding:2px 8px}
 
 <script>
 'use strict';
-const APP_VERSION='2026-10-27.12';
+const APP_VERSION='2026-10-27.13';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -1679,12 +1681,13 @@ async function saveWork(){
   const pid=doc.pid,json=JSON.stringify(toProject());
   const rec=(await wGet(pid))||{id:pid,openedAt:Date.now()};
   Object.assign(rec,{name:doc.name,updatedAt:Date.now(),thumb:thumbURL(),json,size:json.length,w:doc.w,h:doc.h,frames:nF(),dirty:true});
-  await wPut(rec);saveState='saved';updateSavedUI();ghSchedule();
+  await wPut(rec);saveState='saved';markUnsynced();
 }
 function scheduleAutosave(){if(!doc)return;saveState='pending';updateSavedUI();clearTimeout(saveT);saveT=setTimeout(()=>saveWork().catch(()=>{saveState='error';updateSavedUI()}),900)}
 async function flushSave(){if(saveT){try{await saveWork()}catch(e){}}}
 function updateSavedUI(){
-  const sync=GH.ok?(GH.err?' · ⚠ 동기화 안 됨':GH.busy?' · ☁ 동기화 중…':GH.dirty?' · ☁ 곧 동기화':' · ☁ 동기화됨'):'';
+  const sync=GH.ok?(GH.err?' · ⚠ GitHub 안 됨':GH.busy?' · ☁ GitHub 맞추는 중…':GH.dirty?' · ☁ 아직 안 올림 (⌘S)':' · ☁ GitHub에 올라가 있음'):'';
+  const cb=$('#bCloud');cb.classList.toggle('pending',!!(GH.ok&&GH.dirty&&!GH.err));cb.classList.toggle('warn',!!(GH.ok&&GH.err));cb.textContent=GH.busy?'☁ 올리는 중…':'☁ 저장';
   $('#saved').textContent=(saveState==='pending'?'저장 중…':saveState==='error'?'⚠ 이 기기에 저장 못 함':'✓ 내 작업에 저장됨')+sync;
   $('#saved').title=GH.err||'';
   $('#bWorks').classList.toggle('warn',!!(GH.ok&&GH.err));
@@ -1702,6 +1705,7 @@ async function worksDialog(){
   if(modalOpen)return;
   stopPlay();if(xf)applyXf();
   await flushSave();
+  if(GH.ok&&!GH.busy&&Date.now()-(GH.lastPull||0)>30*1000)await ghSync();
   const list=(await wAll()).sort((a,b)=>Math.max(b.openedAt||0,b.updatedAt||0)-Math.max(a.openedAt||0,a.updatedAt||0));
   const card=r=>`<div class="work${r.id===doc.pid?' cur':''}" data-id="${r.id}">
     <div class="wthumb"><img src="${r.thumb||''}" alt=""></div>
@@ -1722,16 +1726,16 @@ async function worksDialog(){
       const nm=el.querySelector('.wname');if(nm.querySelector('input'))return;
       const inp=document.createElement('input');inp.type='text';inp.value=rec.name;nm.textContent='';nm.append(inp);inp.focus();inp.select();
       let done=false;const fin=async ok=>{if(done)return;done=true;const v=inp.value.trim();const r2=await wGet(id);
-        if(ok&&v&&r2&&v!==r2.name){r2.name=v;try{const o=JSON.parse(r2.json);o.name=v;r2.json=JSON.stringify(o)}catch(err){}r2.dirty=true;r2.updatedAt=Date.now();await wPut(r2);if(id===doc.pid){doc.name=v;$('#name').value=v;refreshAll()}ghSchedule()}
+        if(ok&&v&&r2&&v!==r2.name){r2.name=v;try{const o=JSON.parse(r2.json);o.name=v;r2.json=JSON.stringify(o)}catch(err){}r2.dirty=true;r2.updatedAt=Date.now();await wPut(r2);if(id===doc.pid){doc.name=v;$('#name').value=v;refreshAll()}markUnsynced()}
         nm.textContent=(ok&&v)?v:rec.name};
       inp.onblur=()=>fin(true);inp.onkeydown=ev=>{ev.stopPropagation();if(ev.key==='Enter'&&!ev.isComposing)fin(true);if(ev.key==='Escape')fin(false)};
     }else if(b.dataset.a==='dup'){
       const nid=newPid(),name=rec.name+' 복사';let json=rec.json;try{const o=JSON.parse(json);o.name=name;json=JSON.stringify(o)}catch(err){}
       await wPut({...rec,id:nid,name,json,gist:null,remoteVer:null,dirty:true,updatedAt:Date.now(),openedAt:Date.now()});
-      close({t:'reopen'});toast(`"${name}" 을(를) 만들었어요`);ghSchedule();
+      close({t:'reopen'});toast(`"${name}" 을(를) 만들었어요`);markUnsynced();
     }else if(b.dataset.a==='del'){
       if(!b.classList.contains('sure')){box.querySelectorAll('.wdel.sure').forEach(x=>{x.classList.remove('sure');x.textContent='삭제'});b.classList.add('sure');b.textContent='정말 지울까요?';return}
-      await wDel(id);if(rec.gist){GHDEL.push(rec.gist);ghSaveDel();ghSchedule()}
+      await wDel(id);if(rec.gist){GHDEL.push(rec.gist);ghSaveDel();markUnsynced()}
       el.remove();toast(`"${rec.name}" 을(를) 지웠어요`);
       if(id===doc.pid){doc.pid=null;worksDialog.lostCurrent=true}
     }
@@ -1755,7 +1759,13 @@ async function gh(path,opt={}){
   const r=await fetch('https://api.github.com'+path,{method:opt.method||'GET',body:opt.body,cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+GH.token,'X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}});
   if(r.status===401){GH.ok=false;GH.err='토큰이 맞지 않거나 만료됐어요. 새 토큰으로 다시 연결해 주세요';throw{code:'auth'}}
   if(r.status===404)throw{code:'notfound'};
-  if(!r.ok){let m='';try{m=(await r.json()).message||''}catch(e){}throw{code:'http',status:r.status,msg:m}}
+  if(!r.ok){let m='';try{m=(await r.json()).message||''}catch(e){}
+    if((r.status===403||r.status===429)&&(/rate limit/i.test(m)||r.headers.get('x-ratelimit-remaining')==='0')){
+      const reset=+r.headers.get('x-ratelimit-reset')||0,ra=+r.headers.get('retry-after')||0;
+      const when=reset?new Date(reset*1000):ra?new Date(Date.now()+ra*1000):null;
+      GH.err='GitHub 요청 한도에 걸렸어요. '+(when?when.toLocaleTimeString('ko-KR',{hour:'numeric',minute:'2-digit'})+' 이후에':'잠시 뒤에')+' 다시 저장해 주세요. 그림은 이 기기에 안전하게 저장돼 있어요.';
+      throw{code:'rate'}}
+    throw{code:'http',status:r.status,msg:m}}
   return r.status===204?null:r.json();
 }
 async function ghConnect(token,quiet){
@@ -1784,13 +1794,15 @@ function recFromRemote(obj,pid,extra){
   const json=JSON.stringify(obj.data);
   return{id:pid,name:obj.name||'제목없음',updatedAt:obj.updatedAt||Date.now(),thumb:obj.thumb||'',json,size:json.length,w:obj.w,h:obj.h,frames:obj.frames||1,...extra};
 }
-async function ghSync(){
-  if(!GH.ok)return;if(GH.busy){GH.again=true;return}
+async function ghSync(opt={}){
+  const push=!!opt.push;
+  if(!GH.ok)return false;if(GH.busy){if(push)GH.again='push';else if(!GH.again)GH.again=true;return false}
+  GH.lastPull=Date.now();
   await flushSave();
   GH.busy=true;GH.err='';renderGH();updateSavedUI();
   let reloadCur=false,conflicts=0,pulled=0;
   try{
-    for(const id of[...GHDEL]){try{await gh('/gists/'+id,{method:'DELETE'})}catch(e){if(e.code!=='notfound')throw e}GHDEL=GHDEL.filter(x=>x!==id);ghSaveDel()}
+    if(push)for(const id of[...GHDEL]){try{await gh('/gists/'+id,{method:'DELETE'})}catch(e){if(e.code!=='notfound')throw e}GHDEL=GHDEL.filter(x=>x!==id);ghSaveDel()}
     const remote=await ghListAll(),seen=new Set();
     for(const g of remote){
       const pid=ghPidOf(g);if(!pid||seen.has(pid))continue;seen.add(pid);
@@ -1813,23 +1825,31 @@ async function ghSync(){
         rec.gist=null;rec.remoteVer=null;await wPut(rec);
       }
     }
-    for(const rec of await wAll())if(rec.dirty)await ghPush(rec.id);
-    GH.last=Date.now();GH.dirty=false;
-  }catch(e){if(e&&e.code!=='auth')GH.err=e&&e.code==='http'?`GitHub 오류 (${e.status}${e.msg?' · '+e.msg:''})`:'동기화하지 못했어요. 인터넷 연결을 확인해 주세요'}
+    if(push){for(const rec of await wAll())if(rec.dirty)await ghPush(rec.id);GH.last=Date.now()}
+    GH.dirty=GHDEL.length>0||(await wAll()).some(r=>r.dirty);
+  }catch(e){if(e&&e.code!=='auth'&&e.code!=='rate')GH.err=e&&e.code==='http'?`GitHub 오류 (${e.status}${e.msg?' · '+e.msg:''})`:'동기화하지 못했어요. 인터넷 연결을 확인해 주세요'}
   finally{GH.busy=false}
   if(reloadCur==='gone'){const rest=(await wAll()).sort((a,b)=>(b.openedAt||0)-(a.openedAt||0));doc.pid=null;if(rest.length)await openWork(rest[0].id,true);else newDoc(32,32);toast('다른 기기에서 지운 작업이라 다른 작업을 열었어요')}
   else if(reloadCur){const z=zoom,sl=stage.scrollLeft,st=stage.scrollTop,f=doc.frame,a=doc.active;const rec=await wGet(doc.pid);const d=await parseProject(JSON.parse(rec.json));d.pid=rec.id;d.name=rec.name;
     if(f<d.frames.length)d.frame=f;if(a<d.layers.length)d.active=a;setDoc(d);if(d.w===doc.w)setZoomRaw(z,sl,st);toast('다른 기기에서 고친 내용을 불러왔어요')}
   if(conflicts)toast('두 기기에서 동시에 고친 작업이 있어서 "(다른 기기 버전)"으로 따로 저장해 뒀어요');
   renderGH();updateSavedUI();
-  if(GH.again){GH.again=false;setTimeout(ghSync,500)}
+  if(GH.again){const p=GH.again==='push';GH.again=false;setTimeout(()=>ghSync({push:p}),500)}
+  return !GH.err;
 }
 function setZoomRaw(z,sl,st){zoom=z;draw();refreshAll();stage.scrollLeft=sl;stage.scrollTop=st}
-let ghT=0;function ghSchedule(){if(!GH.ok)return;GH.dirty=true;updateSavedUI();clearTimeout(ghT);ghT=setTimeout(ghSync,5000)}
-setInterval(()=>{if(GH.ok&&document.visibilityState==='visible'&&!GH.busy)ghSync()},45000);
+// GitHub에 올리는 건 ☁ 저장(⌘S)을 눌렀을 때만. 받아오는 건 열 때·앱으로 돌아올 때·내 작업을 열 때 (요청 수를 아끼려고)
+function markUnsynced(){GH.dirty=true;updateSavedUI()}
+async function cloudSave(){
+  stopPlay();if(xf)applyXf();
+  await flushSave();
+  if(!GH.ok){toast('이 기기에 저장돼 있어요. 다른 기기와 맞추려면 내 작업 → GitHub 동기화를 연결하세요');return}
+  if(await ghSync({push:true}))toast('☁ GitHub에 올렸어요');else if(GH.err)toast(GH.err);
+}
+function pullIfStale(ms){if(GH.ok&&!GH.busy&&Date.now()-(GH.lastPull||0)>ms)ghSync()}
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'){flushSave().then(()=>{if(GH.ok){clearTimeout(ghT);ghSync()}})}
-  else if(GH.ok)ghSync();
+  if(document.visibilityState==='hidden')flushSave();
+  else pullIfStale(2*60*1000);
 });
 window.addEventListener('pagehide',()=>{if(saveT)saveWork()});
 function renderGH(){
@@ -1838,9 +1858,9 @@ function renderGH(){
   if(GH.ok){
     box.innerHTML=`<div class="ghrow"><b>☁ GitHub 동기화 켜짐</b> <span class="note" style="margin:0">@${esc(GH.login)} · ${GH.busy?'동기화 중…':GH.last?'마지막 동기화 '+fmtDate(GH.last):'아직 동기화 전'}</span></div>
       ${GH.err?`<div class="gherr">${esc(GH.err)}</div>`:''}
-      <div class="row"><button id="ghNow">지금 동기화</button><button id="ghOff">연결 끊기</button></div>
-      <div class="note">컴퓨터와 iPad에서 같은 토큰으로 연결해 두면, 그림이 비공개 Gist로 자동으로 맞춰져요 (그리고 나서 몇 초 뒤, 그리고 45초마다).</div>`;
-    $('#ghNow').onclick=()=>ghSync();$('#ghOff').onclick=ghDisconnect;
+      <div class="row"><button id="ghNow">☁ 지금 올리고 받기</button><button id="ghOff">연결 끊기</button></div>
+      <div class="note">그림은 이 기기에 늘 자동 저장되고, GitHub에는 <b>☁ 저장</b>(⌘S)을 눌렀을 때만 올라가요. 다른 기기에서 올린 건 앱을 열거나 다시 돌아올 때, 그리고 이 창을 열 때 받아와요.</div>`;
+    $('#ghNow').onclick=()=>cloudSave();$('#ghOff').onclick=ghDisconnect;
   }else{
     box.innerHTML=`<div class="ghrow"><b>☁ GitHub 동기화</b> <span class="note" style="margin:0">꺼져 있어요</span></div>
       ${GH.err?`<div class="gherr">${esc(GH.err)}</div>`:''}
@@ -1848,13 +1868,13 @@ function renderGH(){
       <div class="row"><input id="ghTok" type="password" placeholder="GitHub 토큰 (ghp_… 또는 github_pat_…)" style="flex:1" autocomplete="off"><button id="ghGo">연결</button></div>
       <details class="note"><summary>토큰 만드는 법</summary>GitHub → 오른쪽 위 프로필 → <b>Settings</b> → 맨 아래 <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b><br>
       Note 에 "픽셀아트툴", Expiration 은 원하는 기간, 권한은 <b>gist</b> 하나만 체크 → Generate. 나온 토큰을 복사해서 위 칸에 붙여넣고 연결을 눌러요. 컴퓨터와 iPad 둘 다 같은 토큰으로 연결하면 돼요.<br>토큰은 이 기기 브라우저에만 저장되고, 그림은 남들이 볼 수 없는 비공개 Gist 에 저장돼요.</details>`;
-    const go=async t=>{$('#ghBox').querySelectorAll('button').forEach(b=>b.disabled=true);if(await ghConnect(t)){toast('GitHub에 연결했어요. 동기화를 시작해요');ghSync()}else{if(!GH.err)GH.err='토큰이 맞지 않아요';}renderGH();updateSavedUI()};
+    const go=async t=>{$('#ghBox').querySelectorAll('button').forEach(b=>b.disabled=true);if(await ghConnect(t)){toast('GitHub에 연결했어요. 다른 기기 그림을 받아오고, 이 기기 그림을 올려요');ghSync({push:true})}else{if(!GH.err)GH.err='토큰이 맞지 않아요';}renderGH();updateSavedUI()};
     $('#ghGo').onclick=()=>go($('#ghTok').value);
     $('#ghTok').onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();go($('#ghTok').value)}};
     if($('#ghUsePxui'))$('#ghUsePxui').onclick=()=>go(pxui);
   }
 }
-async function ghInit(){if(GH.token&&await ghConnect(GH.token,true))ghSync();updateSavedUI()}
+async function ghInit(){if(GH.token&&await ghConnect(GH.token,true)){GH.dirty=GHDEL.length>0||(await wAll()).some(r=>r.dirty);ghSync()}updateSavedUI()}
 
 /* ---------- iPad: 손가락으로 화면 옮기기·확대, 두 손가락 탭 = 실행취소 ---------- */
 const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
@@ -1962,7 +1982,7 @@ $('#bAnim').onclick=()=>setAnim(!animOn);
 $('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bResize').onclick=resizeDialog;$('#bCrop').onclick=()=>cropDialog();$('#bCropSel').onclick=()=>{if(!sel){toast('먼저 선택 도구(M)로 남길 부분을 선택해 주세요');return}cropTo(sel,'선택 영역')};
 $('#bAdd').onclick=addLayer;$('#bDup').onclick=dupLayer;$('#bDel').onclick=delLayer;$('#bUp').onclick=()=>moveLayer(1);$('#bDown').onclick=()=>moveLayer(-1);$('#bMerge').onclick=mergeDown;
 $('#bSelAll').onclick=()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()};$('#bSelNone').onclick=()=>{sel=null;render()};
-$('#bWorks').onclick=()=>worksDialog();
+$('#bWorks').onclick=()=>worksDialog();$('#bCloud').onclick=()=>cloudSave();
 $('#bCopy').onclick=()=>copySel();$('#bPaste').onclick=pasteClip;$('#bCut').onclick=cutSel;$('#bClear').onclick=clearSel;$('#bFlipH').onclick=()=>flip(true);$('#bFlipV').onclick=()=>flip(false);
 $('#zIn').onclick=()=>setZoom(zoom+Math.max(1,Math.round(zoom/4)));$('#zOut').onclick=()=>setZoom(zoom-Math.max(1,Math.round(zoom/5)));$('#zFit').onclick=fitZoom;
 $('#name').onchange=e=>{doc.name=e.target.value.trim()||'제목없음';dirty=true;refreshAll();scheduleAutosave()};
@@ -1991,7 +2011,8 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>⌘'</td><td>타일 격자 켜기 / 끄기</td></tr>
 <tr><td>[ &nbsp; ]</td><td>굵기 줄이기 / 늘리기</td></tr>
 <tr><td>⌘Z / ⇧⌘Z</td><td>실행취소 / 다시실행</td></tr>
-<tr><td>⌘S / ⇧⌘S / ⌘O</td><td>저장 / 다른 이름으로 저장 / 열기</td></tr>
+<tr><td>⌘S</td><td>☁ 저장 (GitHub에 올리기)</td></tr>
+<tr><td>⇧⌘S / ⌘O</td><td>.pxproj 파일로 저장 / 파일 열기</td></tr>
 <tr><td>⇧B</td><td>마네킹 꺼내기</td></tr>
 <tr><td>⇧T</td><td>애니메이션 타임라인 켜기 / 끄기</td></tr>
 <tr><td>⌘C ⌘X ⌘V</td><td>복사 · 잘라내기 · 붙여넣기(새 레이어)</td></tr>
@@ -2020,7 +2041,7 @@ window.addEventListener('keydown',e=>{
   if(xf&&!typing&&e.key==='Enter'){e.preventDefault();applyXf();return}
   if(xf&&e.key==='Escape'&&!typing){e.preventDefault();cancelXf();return}
   if(mod&&e.key==="'"){e.preventDefault();grid.tile=grid.tile==='none'?(grid.last||'square'):'none';gridChanged();toast(grid.tile==='none'?'타일 격자 끔':'타일 격자 켬');return}
-  if(mod&&e.code==='KeyS'){e.preventDefault();e.shiftKey?saveAs():saveProject();return}
+  if(mod&&e.code==='KeyS'){e.preventDefault();e.shiftKey?saveAs():cloudSave();return}
   if(typing||tag==='SELECT')return;
   if(e.code==='Space'){e.preventDefault();spaceDown=true;stage.classList.add('pan');return}
   if(mod){
