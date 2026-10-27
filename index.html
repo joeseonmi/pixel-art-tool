@@ -214,6 +214,7 @@ footer button{padding:2px 8px}
   <div class="tools" id="tools"></div>
   <h4>옵션</h4>
   <div class="row"><span>굵기</span><input id="brush" type="range" min="1" max="16" value="1"><span id="brushv">1</span></div>
+  <div class="row"><label title="굵기가 4면 그림을 4×4 칸으로 나눠서, 커서가 있는 칸 하나를 통째로 칠해요"><input id="snapBrush" type="checkbox">굵기만큼 칸에 맞추기</label></div>
   <div class="row"><label><input id="fillShape" type="checkbox">도형 속까지 채우기</label></div>
   <div class="row"><label><input id="mirror" type="checkbox">좌우 대칭</label></div>
   <div class="row"><label title="사각형·원·선을 그리고 나면 바로 크기·회전을 바꿀 수 있는 틀이 떠요"><input id="autoXf" type="checkbox" checked>도형 그린 뒤 바로 변형</label></div>
@@ -339,7 +340,7 @@ const DIRS={forward:'앞으로',reverse:'거꾸로',pingpong:'왕복'};
 const DEFAULT_DUR=100;
 
 let doc=null, uid=1;
-let tool='pencil', color='#1d2b53', brush=1, fillShape=false, mirror=false, zoom=16, autoXf=true;
+let tool='pencil', color='#1d2b53', brush=1, fillShape=false, mirror=false, zoom=16, autoXf=true, snapBrush=false;
 let grid={pixel:true,tile:'none',w:16,h:16,x:0,y:0,color:'#5fd4b8',alpha:60,last:'square'};
 let xf=null, xfDrag=null;
 let sel=null, palette=[...DEFAULT_PAL], clip=null;
@@ -455,6 +456,12 @@ function draw(){
     for(let y=1;y<doc.h;y++){vctx.moveTo(0,y*z+.5);vctx.lineTo(W,y*z+.5)}
     vctx.strokeStyle='rgba(90,90,100,.28)';vctx.lineWidth=1;vctx.stroke();
   }
+  if(snapBrush&&brush>1&&brush*z>=6){
+    vctx.beginPath();
+    for(let x=brush;x<doc.w;x+=brush){vctx.moveTo(x*z+.5,0);vctx.lineTo(x*z+.5,H)}
+    for(let y=brush;y<doc.h;y+=brush){vctx.moveTo(0,y*z+.5);vctx.lineTo(W,y*z+.5)}
+    vctx.strokeStyle='rgba(60,60,72,.45)';vctx.lineWidth=1;vctx.stroke();
+  }
   if(grid.tile!=='none')drawTileGrid(W,H,z);
   if(mirror){vctx.fillStyle='rgba(95,212,184,.7)';vctx.fillRect(W/2-1,0,2,H)}
   if(sel){
@@ -464,9 +471,9 @@ function draw(){
   }
   drawOverlay();
   if(hover&&!drag&&!playing&&!xf){
-    const n=(tool==='pencil'||tool==='eraser'||tool==='line'||(!fillShape&&(tool==='rect'||tool==='ellipse')))?brush:1,o=n>>1;
-    vctx.lineWidth=1;vctx.strokeStyle='rgba(0,0,0,.8)';vctx.strokeRect((hover.x-o)*z+.5,(hover.y-o)*z+.5,n*z-1,n*z-1);
-    vctx.strokeStyle='rgba(255,255,255,.9)';vctx.strokeRect((hover.x-o)*z+1.5,(hover.y-o)*z+1.5,n*z-3,n*z-3);
+    const useB=(tool==='pencil'||tool==='eraser'||tool==='line'||(!fillShape&&(tool==='rect'||tool==='ellipse'))),n=useB?brush:1,bo=useB?brushOrigin(hover.x,hover.y):hover;
+    vctx.lineWidth=1;vctx.strokeStyle='rgba(0,0,0,.8)';vctx.strokeRect(bo.x*z+.5,bo.y*z+.5,n*z-1,n*z-1);
+    vctx.strokeStyle='rgba(255,255,255,.9)';vctx.strokeRect(bo.x*z+1.5,bo.y*z+1.5,n*z-3,n*z-3);
   }
   if(!pvPlaying())drawPreview(doc.frame);
 }
@@ -985,7 +992,8 @@ function bounds(){
 }
 function plot1(ctx,x,y){if(x<B.x0||y<B.y0||x>=B.x1||y>=B.y1)return;erasing?ctx.clearRect(x,y,1,1):ctx.fillRect(x,y,1,1)}
 function plot(ctx,x,y){plot1(ctx,x,y);if(mirror)plot1(ctx,doc.w-1-x,y)}
-function dot(ctx,x,y){const o=brush>>1;for(let j=0;j<brush;j++)for(let i=0;i<brush;i++)plot(ctx,x-o+i,y-o+j)}
+function brushOrigin(x,y){return snapBrush&&brush>1?{x:Math.floor(x/brush)*brush,y:Math.floor(y/brush)*brush}:{x:x-(brush>>1),y:y-(brush>>1)}}
+function dot(ctx,x,y){const b=brushOrigin(x,y);for(let j=0;j<brush;j++)for(let i=0;i<brush;i++)plot(ctx,b.x+i,b.y+j)}
 function bres(x0,y0,x1,y1,fn){
   const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;
   for(;;){fn(x0,y0);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}
@@ -1866,7 +1874,8 @@ TOOLS.forEach(([id,label,key])=>{const b=document.createElement('button');b.data
 $('#color').oninput=e=>setColor(e.target.value);
 $('#hex').onchange=e=>{let v=e.target.value.trim();if(v[0]!=='#')v='#'+v;if(/^#[0-9a-f]{6}$/i.test(v))setColor(v);else e.target.value=color};
 $('#bPalAdd').onclick=()=>{if(!palette.includes(color)){palette.push(color);drawPalette();scheduleAutosave()}};
-$('#brush').oninput=e=>{brush=+e.target.value;$('#brushv').textContent=brush};
+$('#brush').oninput=e=>{brush=+e.target.value;$('#brushv').textContent=brush;render()};
+$('#snapBrush').onchange=e=>{snapBrush=e.target.checked;saveSettings();render()};
 $('#fillShape').onchange=e=>fillShape=e.target.checked;
 $('#mirror').onchange=e=>{mirror=e.target.checked;render()};
 $('#autoXf').onchange=e=>{autoXf=e.target.checked;saveSettings()};
@@ -1929,9 +1938,9 @@ $('#onPrev').onchange=e=>{onion.prev=Math.max(0,Math.min(5,+e.target.value|0));e
 $('#onNext').onchange=e=>{onion.next=Math.max(0,Math.min(5,+e.target.value|0));e.target.value=onion.next;saveSettings();render()};
 $('#onTint').onchange=e=>{onion.tint=e.target.checked;saveSettings();render()};
 $('#pvPlay').onchange=()=>{pvSeqI=0;pvTick()};$('#pvZoom').onchange=()=>{pvTick();render()};
-function saveSettings(){try{localStorage.setItem('pixelart-tool-anim-settings',JSON.stringify({onion,animOn,exportScale,grid,autoXf,fingerDraw}))}catch(e){}}
-function loadSettings(){try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(s.onion)Object.assign(onion,s.onion);animOn=!!s.animOn;if([1,2,4,8,16].includes(s.exportScale))exportScale=s.exportScale;if(s.grid)Object.assign(grid,s.grid);if(typeof s.autoXf==='boolean')autoXf=s.autoXf;if(typeof s.fingerDraw==='boolean')fingerDraw=s.fingerDraw}catch(e){}
-  $('#autoXf').checked=autoXf;refreshGridUI();
+function saveSettings(){try{localStorage.setItem('pixelart-tool-anim-settings',JSON.stringify({onion,animOn,exportScale,grid,autoXf,fingerDraw,snapBrush}))}catch(e){}}
+function loadSettings(){try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(s.onion)Object.assign(onion,s.onion);animOn=!!s.animOn;if([1,2,4,8,16].includes(s.exportScale))exportScale=s.exportScale;if(s.grid)Object.assign(grid,s.grid);if(typeof s.autoXf==='boolean')autoXf=s.autoXf;snapBrush=!!s.snapBrush;if(typeof s.fingerDraw==='boolean')fingerDraw=s.fingerDraw}catch(e){}
+  $('#autoXf').checked=autoXf;$('#snapBrush').checked=snapBrush;refreshGridUI();
   $('#onion').checked=onion.on;$('#onPrev').value=onion.prev;$('#onNext').value=onion.next;$('#onTint').checked=onion.tint}
 
 $('#bHelp').onclick=()=>modal('단축키',`<table>
