@@ -204,6 +204,7 @@ footer button{padding:2px 8px}
   <button id="bUndo" title="실행취소 (⌘Z)">↶ 취소</button>
   <button id="bRedo" title="다시실행 (⇧⌘Z)">↷ 다시</button>
   <button id="bResize">캔버스 크기</button>
+  <button id="bCrop" title="여백을 잘라내거나 선택 영역만 남기기">자르기</button>
   <span class="grow"></span>
   <input id="name" type="text" placeholder="파일 이름" title="저장할 때 쓰는 이름">
   <button id="bHelp">단축키</button>
@@ -244,6 +245,7 @@ footer button{padding:2px 8px}
     <button id="bCut">잘라내기</button><button id="bClear">지우기</button>
     <button id="bFlipH">좌우 뒤집기</button><button id="bFlipV">상하 뒤집기</button>
     <button id="bSelAll">전체 선택</button><button id="bSelNone">선택 해제</button>
+    <button id="bCropSel" style="grid-column:1/-1" title="선택한 부분만 남기고 캔버스를 잘라요 (모든 레이어·프레임)">선택 영역으로 캔버스 자르기</button>
   </div>
   <div class="row" id="fingerRow" hidden><label title="끄면 손가락은 화면 이동·확대만, 그리기는 애플펜슬로"><input id="fingerDraw" type="checkbox">손가락으로도 그리기</label></div>
 </aside>
@@ -1184,6 +1186,43 @@ function resizeDoc(nw,nh,ox,oy){
   for(const l of doc.layers)l.cels=l.cels.map(old=>{const c=mkCel(nw,nh);c.ctx.drawImage(old.canvas,ox,oy);return c});
   doc.w=nw;doc.h=nh;sel=null;
 }
+/* ---------- 캔버스 자르기 ---------- */
+// 모든 레이어·모든 프레임에서 그림이 있는 범위
+function allContentBox(){
+  let x0=doc.w,y0=doc.h,x1=-1,y1=-1;
+  for(const l of doc.layers)for(const c of l.cels){
+    if(celEmpty(c))continue;const b=contentBox(celData(c),doc.w,doc.h);if(!b)continue;
+    x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.w-1);y1=Math.max(y1,b.y+b.h-1);
+  }
+  return x1<0?null:{x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
+}
+function cropTo(r,label){
+  stopPlay();if(xf)applyXf();
+  const w=clampSize(r.w),h=clampSize(r.h);
+  if(r.x===0&&r.y===0&&w===doc.w&&h===doc.h){toast('이미 그 크기예요');return}
+  const ow=doc.w,oh=doc.h;
+  resizeDoc(w,h,-r.x,-r.y);sel=null;commit();fitZoom();
+  toast(`${label}: ${ow}×${oh} → ${w}×${h} 로 잘랐어요 (⌘Z로 되돌리기)`);
+}
+async function cropDialog(){
+  stopPlay();if(xf)applyXf();
+  const box=allContentBox();
+  if(!box&&!sel){toast('자를 그림이 없어요');return}
+  const info=p=>{if(!box)return'';const w=box.w+p*2,h=box.h+p*2;return`${doc.w}×${doc.h} → <b>${w}×${h}</b>`};
+  const p=modal('캔버스 자르기',`
+    <div class="row"><label><input type="radio" name="crMode" value="trim"${box?' checked':' disabled'}> 그림에 딱 맞게 (빈 여백 없애기)</label></div>
+    <div class="row" style="padding-left:24px">둘레에 여백 <input id="crPad" type="number" min="0" max="256" value="0"> px 남기기 <span id="crInfo" style="color:var(--muted)">${info(0)}</span></div>
+    <div class="row"><label><input type="radio" name="crMode" value="sel"${sel?(box?'':' checked'):' disabled'}> 선택 영역으로${sel?` (${sel.w}×${sel.h})`:' — 먼저 선택 도구(M)로 영역을 고르세요'}</label></div>
+    <div class="note">모든 레이어와 모든 프레임에 똑같이 적용돼요. 숨긴 레이어의 그림도 범위에 들어가요. 실행취소(⌘Z)로 되돌릴 수 있어요.<br>
+    마네킹으로 쓸 거라면 자른 뒤 <b>파일 → 지금 그림을 마네킹으로 등록</b>.</div>`,
+    [{label:'취소',value:null},{label:'자르기',value:1,primary:true}]);
+  $('#crPad').oninput=e=>{$('#crInfo').innerHTML=info(Math.max(0,+e.target.value|0));const t=document.querySelector('input[name=crMode][value=trim]');if(!t.disabled)t.checked=true};
+  if(!await p)return;
+  const mode=(document.querySelector('input[name=crMode]:checked')||{}).value;
+  if(mode==='sel'&&sel)cropTo({x:Math.max(0,sel.x),y:Math.max(0,sel.y),w:Math.min(doc.w,sel.x+sel.w)-Math.max(0,sel.x),h:Math.min(doc.h,sel.y+sel.h)-Math.max(0,sel.y)},'선택 영역');
+  else if(mode==='trim'&&box){const pd=Math.max(0,Math.min(256,+$('#crPad').value|0));cropTo({x:box.x-pd,y:box.y-pd,w:box.w+pd*2,h:box.h+pd*2},'여백 자르기')}
+}
+
 async function resizeDialog(){
   stopPlay();
   const r=await modal('캔버스 크기',`<div class="row">가로 <input id="mw" type="number" min="1" max="${MAX}" value="${doc.w}"> 세로 <input id="mh" type="number" min="1" max="${MAX}" value="${doc.h}"></div>
@@ -1917,7 +1956,7 @@ function setAnim(on,silent){
   if(!silent)toast(on?'애니메이션 타임라인을 켰어요':'애니메이션 타임라인을 껐어요'+(doc&&nF()>1?` (프레임 ${nF()}장은 그대로 있어요)`:''));
 }
 $('#bAnim').onclick=()=>setAnim(!animOn);
-$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bResize').onclick=resizeDialog;
+$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bResize').onclick=resizeDialog;$('#bCrop').onclick=()=>cropDialog();$('#bCropSel').onclick=()=>{if(!sel){toast('먼저 선택 도구(M)로 남길 부분을 선택해 주세요');return}cropTo(sel,'선택 영역')};
 $('#bAdd').onclick=addLayer;$('#bDup').onclick=dupLayer;$('#bDel').onclick=delLayer;$('#bUp').onclick=()=>moveLayer(1);$('#bDown').onclick=()=>moveLayer(-1);$('#bMerge').onclick=mergeDown;
 $('#bSelAll').onclick=()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()};$('#bSelNone').onclick=()=>{sel=null;render()};
 $('#bWorks').onclick=()=>worksDialog();
