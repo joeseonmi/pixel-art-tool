@@ -300,7 +300,9 @@ footer button{padding:2px 8px}
   <span id="coords">–</span>
   <span id="size"></span>
   <span class="grow" id="hint"></span>
+  <button id="bUpdate" class="primary" hidden title="눌러서 최신 버전으로 새로고침">새 버전 있어요 · 업데이트</button>
   <span id="saved"></span>
+  <span id="ver" style="opacity:.6"></span>
   <button id="bGrid" title="격자 설정 (⌘')">격자 ▾</button>
   <button id="zOut">−</button><span id="zoomv"></span><button id="zIn">＋</button><button id="zFit">맞춤</button>
 </footer>
@@ -322,6 +324,7 @@ footer button{padding:2px 8px}
 
 <script>
 'use strict';
+const APP_VERSION='2026-10-27.12';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -2052,6 +2055,16 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;stage.classList.remove('pan')}});
 window.addEventListener('blur',()=>{spaceDown=false;stage.classList.remove('pan')});
 
+/* ---------- 새 버전 확인 (iPad 홈 화면 앱이 예전 버전을 붙잡고 있을 때) ---------- */
+async function checkUpdate(){
+  if(!/^https?:/.test(location.protocol))return;
+  try{
+    const t=await(await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'})).text();
+    const m=t.match(/APP_VERSION='([^']+)'/);
+    if(m&&m[1]!==APP_VERSION){const b=$('#bUpdate');b.hidden=false;b.onclick=async()=>{await flushSave();location.replace(location.pathname+'?v='+encodeURIComponent(m[1]))}}
+  }catch(e){}
+}
+
 /* ---------- 시작 ---------- */
 (async()=>{
   loadSettings();setAnim(animOn,true);setColor(color);setTool('pencil');
@@ -2065,6 +2078,8 @@ window.addEventListener('blur',()=>{spaceDown=false;stage.classList.remove('pan'
   if(!opened)newDoc(32,32);
   if(TOUCH){$('#fingerRow').hidden=false;$('#fingerDraw').checked=fingerDraw}
   ghInit();
+  $('#ver').textContent='v'+APP_VERSION;
+  checkUpdate();setInterval(checkUpdate,10*60*1000);
 })();
 </script>
 </body>
