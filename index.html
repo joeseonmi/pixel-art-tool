@@ -129,9 +129,9 @@ footer button{padding:2px 8px}
 #bAnim.on{background:var(--accent);color:var(--accent-ink)}
 /* 마네킹 */
 .bases{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:52vh;overflow:auto;margin:4px 0}
-.base{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:var(--panel2)}
+.base{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:var(--panel2)}
 .base.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.base canvas{image-rendering:pixelated;border-radius:6px;background:repeating-conic-gradient(#c9cbd1 0 25%,#f1f2f4 0 50%) 0 0/10px 10px}
+.base canvas{max-width:100%;max-height:96px;object-fit:contain;image-rendering:pixelated;border-radius:6px;background:repeating-conic-gradient(#c9cbd1 0 25%,#f1f2f4 0 50%) 0 0/10px 10px}
 .base .bn{font-size:12px;text-align:center}
 .base .bs{font-size:11px;color:var(--muted)}
 .base .bdel{font-size:11px;padding:1px 6px;color:var(--danger)}
@@ -1582,8 +1582,8 @@ function myBases(){try{const a=JSON.parse(localStorage.getItem(MYBASE_KEY)||'[]'
 function setMyBases(a){try{localStorage.setItem(MYBASE_KEY,JSON.stringify(a));return true}catch(e){toast('저장 공간이 모자라요. 마네킹을 몇 개 지우거나 .pxproj 파일로 저장해 두세요.');return false}}
 async function drawBaseThumb(canvas,proj){
   try{
-    const d=await parseProject(proj),s=Math.max(1,Math.floor(Math.min(96/d.w,96/d.h)));
-    canvas.width=d.w*s;canvas.height=d.h*s;const x=canvas.getContext('2d');x.imageSmoothingEnabled=false;
+    const d=await parseProject(proj),f=Math.min(96/d.w,96/d.h),s=f>=1?Math.floor(f):f;
+    canvas.width=Math.max(1,Math.round(d.w*s));canvas.height=Math.max(1,Math.round(d.h*s));const x=canvas.getContext('2d');x.imageSmoothingEnabled=false;
     for(const l of d.layers){if(!l.visible)continue;x.globalAlpha=l.opacity;x.drawImage(l.cels[0].canvas,0,0,canvas.width,canvas.height)}
   }catch(e){}
 }
