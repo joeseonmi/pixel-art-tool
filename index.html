@@ -152,6 +152,33 @@ footer button{padding:2px 8px}
 .base .bdel.sure{background:var(--danger);border-color:var(--danger);color:#2a0d0d;font-weight:600}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
 #dlg.wide{max-width:640px;width:92vw}
+/* 픽셀아트 변환 */
+#dlg.pzdlg{max-width:940px;width:94vw}
+.pz{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;align-items:start}
+@media(max-width:760px){.pz{grid-template-columns:1fr}}
+#pzDrop{border:2px dashed var(--line);border-radius:10px;padding:22px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+#pzDrop:hover,#pzDrop:focus-visible,#pzDrop.over{border-color:var(--accent);outline:none}
+#pzDrop.over{background:rgba(95,212,184,.08)}
+#pzDrop span{color:var(--muted);font-size:12px}
+#pzList{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;max-height:40vh;overflow:auto}
+#pzList li{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel2)}
+.pzth{display:flex;gap:4px;flex:none}
+.pzth img,.pzth canvas{width:56px;height:56px;object-fit:contain;border-radius:6px;image-rendering:pixelated;background:repeating-conic-gradient(#c9cbd1 0 25%,#f1f2f4 0 50%) 0 0/10px 10px}
+.pzmid{flex:1;min-width:0}
+.pzn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pzm{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pzb{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.pzb button{padding:2px 8px;font-size:12px}
+.pzx{background:none!important;border:0!important;color:var(--muted);font-size:17px;padding:2px 6px}
+.pzx:hover{color:var(--danger)}
+#pzLog{margin-top:10px;background:#101114;border:1px solid var(--line);border-radius:8px;padding:8px 10px;height:130px;overflow:auto;font:12px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;color:#cfd3cc}
+#pzLog .g{color:#a5d88f}#pzLog .w{color:#f0b46a}#pzLog .e{color:#ff8a80}#pzLog .h{color:#8fd3cd;font-weight:700}
+.pzopt .row{margin:6px 0}
+.pzopt label.row{display:flex;gap:6px;align-items:center}
+.pzopt hr{border:0;border-top:1px solid var(--line);margin:10px 0}
+.pzopt .mh{font-size:11px;color:var(--muted);font-weight:600}
+.pzopt input[type=range]{flex:1;accent-color:var(--accent)}
+.pzall{display:grid;gap:5px;margin-top:8px}
 /* 격자 설정 */
 #gridPop{position:fixed;right:10px;bottom:40px;z-index:25;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:290px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 #gridPop h5{margin:0 0 8px;font-size:12px;color:var(--muted);font-weight:600}
@@ -216,6 +243,7 @@ footer button{padding:2px 8px}
   <button id="bWorks" title="이 기기에 저장된 작업 목록 · GitHub 동기화">내 작업</button>
   <button id="bCloud" title="GitHub에 올리고 다른 기기 것 받기 (⌘S)">☁ 저장</button>
   <button id="bAnim" title="애니메이션 타임라인 켜기/끄기 (⇧T)">애니메이션</button>
+  <button id="bPixelize" title="AI로 뽑은 픽셀아트풍 그림을 진짜 픽셀아트로 바꿔요 (⇧P)">픽셀아트 변환</button>
   <span class="sep"></span>
   <button id="bUndo" title="실행취소 (⌘Z)">↶ 취소</button>
   <button id="bRedo" title="다시실행 (⇧⌘Z)">↷ 다시</button>
@@ -343,7 +371,7 @@ footer button{padding:2px 8px}
 
 <script>
 'use strict';
-const APP_VERSION='2026-10-27.14';
+const APP_VERSION='2026-10-27.15';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -422,7 +450,7 @@ function fHi(){return Math.max(fsel.a,fsel.b)}
 
 function modal(title,body,buttons,opts){
   return new Promise(res=>{
-    const dlg=$('#dlg');dlg.className=opts&&opts.wide?'wide':'';
+    const dlg=$('#dlg');dlg.className=(opts&&opts.wide?'wide':'')+(opts&&opts.cls?' '+opts.cls:'');
     dlg.innerHTML=`<h3>${title}</h3><div class="mbody">${body}</div><div class="mbtns"></div>`;
     const done=v=>{$('#back').hidden=true;modalOpen=false;window.removeEventListener('keydown',onEsc,true);res(v)};
     const onEsc=e=>{if(e.key==='Escape'&&!dlg.contains(e.target)){e.preventDefault();done(null)}};
@@ -2183,6 +2211,334 @@ $('#fileMenu').onkeydown=e=>{
 };
 document.addEventListener('pointerdown',e=>{if(!$('#fileMenu').hidden&&!e.target.closest('.menuwrap'))openMenu(false)});
 
+/* ---------- 픽셀아트 변환 (AI가 그린 픽셀아트풍 그림 → 진짜 픽셀아트) ---------- */
+// pixel_app.py 의 변환 방식을 그대로 옮겼어요: 격자 감지 → 칸별 대표색 → 배경 투명화 → 색 줄이기 → 외톨이 점 정리
+const PZ={items:[],busy:false,dir:null};
+const PZ_PREF='pixelize-prefs';
+function pzPrefs(){let p={};try{p=JSON.parse(localStorage.getItem(PZ_PREF)||'{}')}catch(e){}
+  return Object.assign({colors:'32',scale:'8',cell:'',bg_tol:'7',remove_bg:true,holes:true,despeckle:true,save_small:true,save_big:true,save_trim:false},p)}
+function pzSavePrefs(p){try{localStorage.setItem(PZ_PREF,JSON.stringify(p))}catch(e){}}
+const pzTick=()=>new Promise(r=>setTimeout(r,0));
+function pzLab(r,g,b){
+  const f=v=>{v/=255;return v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92};
+  const R=f(r),G=f(g),B=f(b);
+  let x=(R*0.4124564+G*0.3575761+B*0.1804375)/0.95047,y=R*0.2126729+G*0.7151522+B*0.0721750,z=(R*0.0193339+G*0.1191920+B*0.9503041)/1.08883;
+  const h=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;x=h(x);y=h(y);z=h(z);
+  return[116*y-16,500*(x-y),200*(y-z)];
+}
+// 칸 크기 추정: 줄마다 색이 바뀌는 지점 사이 거리의 최빈값
+function pzPeriod(rgb,W,H,axis,maxCell=80){
+  const len=axis===1?W:H,lines=axis===1?H:W,hist=new Float64Array(maxCell);
+  const step=Math.max(1,Math.floor(lines/1500)),g=new Float64Array(len-1);
+  for(let r=0;r<lines;r+=step){
+    for(let i=0;i<len-1;i++){
+      const a=axis===1?(r*W+i)*3:(i*W+r)*3,b=axis===1?a+3:a+W*3;
+      g[i]=Math.abs(rgb[b]-rgb[a])+Math.abs(rgb[b+1]-rgb[a+1])+Math.abs(rgb[b+2]-rgb[a+2]);
+    }
+    const n=g.length;let last=-1;
+    for(let i=0;i<n;i++){
+      const pv=g[(i-1+n)%n],nx=g[(i+1)%n];
+      if(g[i]>30&&g[i]>=pv&&g[i]>nx){if(last>=0){const d=i-last;if(d<maxCell)hist[d]++}last=i}
+    }
+  }
+  hist[0]=hist[1]=hist[2]=0;
+  const sm=new Float64Array(maxCell);for(let i=0;i<maxCell;i++)sm[i]=(i>0?hist[i-1]:0)+2*hist[i]+(i<maxCell-1?hist[i+1]:0);
+  let m=0;for(let i=1;i<maxCell;i++)if(sm[i]>sm[m])m=i;
+  if(sm[m]<=0)return{period:1,conf:0};
+  const lo=Math.max(3,m-2),hi=Math.min(maxCell,m+3);let s=0,sw=0,tot=0;
+  for(let i=lo;i<hi;i++){s+=i*hist[i];sw+=hist[i]}for(let i=0;i<maxCell;i++)tot+=hist[i];
+  return{period:sw?s/sw:m,conf:tot?sw/tot:0};
+}
+function pzProfile(rgb,W,H,axis){
+  const out=new Float64Array((axis===1?W:H)-1);
+  if(axis===1){for(let y=0;y<H;y++)for(let x=0;x<W-1;x++){const a=(y*W+x)*3;out[x]+=Math.abs(rgb[a+3]-rgb[a])+Math.abs(rgb[a+4]-rgb[a+1])+Math.abs(rgb[a+5]-rgb[a+2])}}
+  else{for(let y=0;y<H-1;y++)for(let x=0;x<W;x++){const a=(y*W+x)*3,b=a+W*3;out[y]+=Math.abs(rgb[b]-rgb[a])+Math.abs(rgb[b+1]-rgb[a+1])+Math.abs(rgb[b+2]-rgb[a+2])}}
+  return out;
+}
+// 격자선을 실제 경계에 맞추기 (간격은 칸 크기 근처 + 경계가 강한 곳, 동적계획법)
+function pzFitLines(profile,period,slack=0.12){
+  const n=profile.length+1,g0=new Float64Array(n);
+  for(let i=1;i<n;i++)g0[i]=profile[i-1];
+  // 가우시안 흐림 (sigma 0.7, 반지름 3, 가장자리는 거울처럼)
+  const ker=[];let ks=0;for(let k=-3;k<=3;k++){const v=Math.exp(-k*k/(2*0.49));ker.push(v);ks+=v}
+  const refl=i=>{while(i<0||i>=n){if(i<0)i=-i-1;if(i>=n)i=2*n-i-1}return i};
+  const g=new Float64Array(n);let mx=0;
+  for(let i=0;i<n;i++){let s=0;for(let k=-3;k<=3;k++)s+=g0[refl(i+k)]*ker[k+3];g[i]=s/ks;if(g[i]>mx)mx=g[i]}
+  for(let i=0;i<n;i++)g[i]/=mx+1e-9;
+  const dmin=Math.max(1,Math.floor(period*(1-slack))),dmax=Math.ceil(period*(1+slack)),NEG=-1e18;
+  const score=new Float64Array(n).fill(NEG),prev=new Int32Array(n).fill(-1),sm=Math.ceil(period);
+  for(let i=0;i<Math.min(sm,n);i++)score[i]=g[i];
+  for(let i=0;i<n;i++)for(let d=dmin;d<=dmax;d++){const j=i-d;if(j<0||score[j]<=NEG/2)continue;
+    const s=score[j]+g[i]-0.15*((d-period)/period)**2*10;if(s>score[i]){score[i]=s;prev[i]=j}}
+  const endLo=Math.max(0,n-1-Math.ceil(period));let i=endLo;for(let k=endLo;k<n;k++)if(score[k]>score[i])i=k;
+  const lines=[];while(i>=0){lines.push(i);i=prev[i]}lines.reverse();
+  if(lines[0]>period*0.5)lines.unshift(0);else lines[0]=0;
+  if(n-1-lines[lines.length-1]>period*0.5)lines.push(n-1);else lines[lines.length-1]=n-1;
+  return lines;
+}
+function pzMedian(a){a.sort((x,y)=>x-y);const n=a.length,h=n>>1;return n%2?a[h]:(a[h-1]+a[h])/2}
+function pzLabel(mask,w,h,eight){
+  const lbl=new Int32Array(w*h);let n=0;const st=[];
+  for(let p=0;p<w*h;p++){if(!mask[p]||lbl[p])continue;n++;lbl[p]=n;st.push(p);
+    while(st.length){const q=st.pop(),x=q%w,y=(q-x)/w;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;if(!eight&&dx&&dy)continue;
+        const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=w||Y>=h)continue;const r=Y*w+X;if(mask[r]&&!lbl[r]){lbl[r]=n;st.push(r)}}}}
+  return{lbl,n};
+}
+async function pixelizeImage(img,o){
+  const W=img.width,H=img.height,src=img.data,rgb=new Uint8Array(W*H*3);
+  for(let i=0,j=0;i<W*H;i++,j+=4){rgb[i*3]=src[j];rgb[i*3+1]=src[j+1];rgb[i*3+2]=src[j+2]}
+  let px,py,conf=1;
+  if(o.cell){px=py=o.cell}else{
+    const a=pzPeriod(rgb,W,H,1),b=pzPeriod(rgb,W,H,0);px=a.period;py=b.period;conf=Math.min(a.conf,b.conf);
+    if(Math.abs(px-py)/Math.max(px,py)<0.04)px=py=(px+py)/2;
+  }
+  await pzTick();
+  const xs=pzFitLines(pzProfile(rgb,W,H,1),px),ys=pzFitLines(pzProfile(rgb,W,H,0),py);
+  const w=xs.length-1,h=ys.length-1;
+  if(w>MAX||h>MAX)throw new Error(`결과가 ${w}×${h}로 너무 커요. '칸 크기'를 직접 넣어 보세요`);
+  await pzTick();
+  // 칸 가운데만 보고 중앙값
+  const cells=new Uint8Array(w*h*3),calpha=new Uint8Array(w*h);
+  const R=[],G=[],Bv=[];
+  for(let r=0;r<h;r++){const y0=ys[r],y1=ys[r+1],my=Math.max(0,Math.round((y1-y0)*0.22)),ya=y0+my,yb=Math.max(ya+1,y1-my);
+    for(let c=0;c<w;c++){const x0=xs[c],x1=xs[c+1],mx=Math.max(0,Math.round((x1-x0)*0.22)),xa=x0+mx,xb=Math.max(xa+1,x1-mx);
+      R.length=G.length=Bv.length=0;
+      for(let y=ya;y<Math.min(yb,H);y++)for(let x=xa;x<Math.min(xb,W);x++){const k=(y*W+x)*3;R.push(rgb[k]);G.push(rgb[k+1]);Bv.push(rgb[k+2])}
+      const q=(r*w+c)*3;if(R.length){cells[q]=Math.floor(pzMedian(R));cells[q+1]=Math.floor(pzMedian(G));cells[q+2]=Math.floor(pzMedian(Bv))}
+      let as=0,an=0;for(let y=y0;y<Math.min(y1,H);y++)for(let x=x0;x<Math.min(x1,W);x++){as+=src[(y*W+x)*4+3];an++}
+      calpha[r*w+c]=an&&as/an>127?1:0;
+    }}
+  await pzTick();
+  const lab=new Float64Array(w*h*3);for(let p=0;p<w*h;p++){const L=pzLab(cells[p*3],cells[p*3+1],cells[p*3+2]);lab[p*3]=L[0];lab[p*3+1]=L[1];lab[p*3+2]=L[2]}
+  let fg=new Uint8Array(calpha),bg=null;
+  if(o.removeBg){
+    // 배경색: 테두리 칸에서 가장 흔한 색
+    const border=[];for(let c=0;c<w;c++)border.push(c,(h-1)*w+c);for(let r=0;r<h;r++)border.push(r*w,r*w+w-1);
+    const cnt=new Map();for(const p of border){const k=((cells[p*3]>>2)<<16)|((cells[p*3+1]>>2)<<8)|(cells[p*3+2]>>2);cnt.set(k,(cnt.get(k)||0)+1)}
+    let key=null,best=-1;for(const[k,v]of[...cnt].sort((a,b)=>a[0]-b[0]))if(v>best){best=v;key=k}
+    const kr=(key>>16)*4,kg=((key>>8)&255)*4,kb=(key&255)*4,nr=[],ng=[],nb=[];
+    for(const p of border){const a=cells[p*3],b=cells[p*3+1],c=cells[p*3+2];if(Math.abs(a-kr)+Math.abs(b-kg)+Math.abs(c-kb)<16){nr.push(a);ng.push(b);nb.push(c)}}
+    bg=[pzMedian(nr),pzMedian(ng),pzMedian(nb)];const bl=pzLab(...bg);
+    const dist=new Float64Array(w*h),cand=new Uint8Array(w*h);
+    for(let p=0;p<w*h;p++){dist[p]=Math.hypot(lab[p*3]-bl[0],lab[p*3+1]-bl[1],lab[p*3+2]-bl[2]);cand[p]=dist[p]<o.bgTol?1:0}
+    const{lbl}=pzLabel(cand,w,h,false),edge=new Set();
+    for(const p of border)if(lbl[p])edge.add(lbl[p]);
+    const bgm=new Uint8Array(w*h);for(let p=0;p<w*h;p++)if(lbl[p]&&edge.has(lbl[p]))bgm[p]=1;
+    if(o.holes){
+      const enc=new Uint8Array(w*h);for(let p=0;p<w*h;p++)enc[p]=dist[p]<2.0&&!bgm[p]?1:0;
+      const L2=pzLabel(enc,w,h,false),sz=new Int32Array(L2.n+1);for(let p=0;p<w*h;p++)sz[L2.lbl[p]]++;
+      for(let p=0;p<w*h;p++)if(L2.lbl[p]&&sz[L2.lbl[p]]>=6)bgm[p]=1;
+    }
+    for(let p=0;p<w*h;p++)fg[p]=calpha[p]&&!bgm[p]?1:0;
+  }
+  // 본체에서 떨어진 아주 작은 조각(3칸 미만) 지우기
+  {const L3=pzLabel(fg,w,h,true),sz=new Int32Array(L3.n+1);for(let p=0;p<w*h;p++)sz[L3.lbl[p]]++;for(let p=0;p<w*h;p++)if(fg[p]&&sz[L3.lbl[p]]<3)fg[p]=0}
+  await pzTick();
+  // 색 줄이기 (보이는 칸만, Lab 공간 k-means)
+  const q=new Uint8Array(cells),ukey=new Map(),uniq=[];
+  for(let p=0;p<w*h;p++){if(!fg[p])continue;const k=(cells[p*3]<<16)|(cells[p*3+1]<<8)|cells[p*3+2];let u=ukey.get(k);if(u==null){u=uniq.length;ukey.set(k,u);uniq.push({k,n:0,L:[lab[p*3],lab[p*3+1],lab[p*3+2]]})}uniq[u].n++}
+  const K=o.colors;
+  if(uniq.length>K){
+    let seed=12345;const rnd=()=>(seed=(seed*1103515245+12345)>>>0)/4294967296;
+    const d2=uniq.map(u=>0),cen=[];const dl=(a,b)=>(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;
+    let first=0;uniq.forEach((u,i)=>{if(u.n>uniq[first].n)first=i});cen.push(uniq[first].L.slice());
+    uniq.forEach((u,i)=>d2[i]=dl(u.L,cen[0]));
+    for(let k=1;k<K;k++){let tot=0;uniq.forEach((u,i)=>tot+=d2[i]*u.n);if(tot<=0)break;let t=rnd()*tot,pick=0;
+      for(let i=0;i<uniq.length;i++){t-=d2[i]*uniq[i].n;if(t<=0){pick=i;break}}
+      cen.push(uniq[pick].L.slice());uniq.forEach((u,i)=>d2[i]=Math.min(d2[i],dl(u.L,cen[k])))}
+    const lbl=new Int32Array(uniq.length);
+    for(let it=0;it<40;it++){
+      uniq.forEach((u,i)=>{let b=0,bd=Infinity;for(let k=0;k<cen.length;k++){const d=dl(u.L,cen[k]);if(d<bd){bd=d;b=k}}lbl[i]=b});
+      const acc=cen.map(()=>[0,0,0,0]);uniq.forEach((u,i)=>{const a=acc[lbl[i]];a[0]+=u.L[0]*u.n;a[1]+=u.L[1]*u.n;a[2]+=u.L[2]*u.n;a[3]+=u.n});
+      let moved=false;acc.forEach((a,k)=>{if(!a[3])return;const nc=[a[0]/a[3],a[1]/a[3],a[2]/a[3]];if(dl(nc,cen[k])>1e-6)moved=true;cen[k]=nc});
+      if(!moved)break;if(it%8===7)await pzTick();
+    }
+    // 각 묶음의 대표색 = 중심에 가장 가까운 실제 색
+    const rep=cen.map(()=>-1),rd=cen.map(()=>Infinity);
+    uniq.forEach((u,i)=>{const k=lbl[i],d=dl(u.L,cen[k]);if(d<rd[k]){rd[k]=d;rep[k]=i}});
+    for(let p=0;p<w*h;p++){if(!fg[p])continue;const k=(cells[p*3]<<16)|(cells[p*3+1]<<8)|cells[p*3+2],r=uniq[rep[lbl[ukey.get(k)]]].k;q[p*3]=r>>16;q[p*3+1]=(r>>8)&255;q[p*3+2]=r&255}
+  }
+  // 외톨이 칸 정리: 주변 8칸에 같은 색이 없고 비슷한 색 이웃이 있으면 그 색으로
+  let nFix=0;
+  if(o.despeckle){
+    const qlab=new Float64Array(w*h*3);for(let p=0;p<w*h;p++){const L=pzLab(q[p*3],q[p*3+1],q[p*3+2]);qlab[p*3]=L[0];qlab[p*3+1]=L[1];qlab[p*3+2]=L[2]}
+    const out=new Uint8Array(q);
+    for(let r=0;r<h;r++)for(let c=0;c<w;c++){const p=r*w+c;if(!fg[p])continue;const nb=[];
+      for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const rr=r+dr,cc=c+dc;if(rr>=0&&cc>=0&&rr<h&&cc<w&&fg[rr*w+cc])nb.push(rr*w+cc)}
+      if(nb.length<5)continue;
+      if(nb.some(n=>q[n*3]===q[p*3]&&q[n*3+1]===q[p*3+1]&&q[n*3+2]===q[p*3+2]))continue;
+      let bk=-1,bd=Infinity;for(const n of nb){const d=(qlab[n*3]-qlab[p*3])**2+(qlab[n*3+1]-qlab[p*3+1])**2+(qlab[n*3+2]-qlab[p*3+2])**2;if(d<bd){bd=d;bk=n}}
+      if(bd<144){out[p*3]=q[bk*3];out[p*3+1]=q[bk*3+1];out[p*3+2]=q[bk*3+2];nFix++}}
+    q.set(out);
+  }
+  const res=new ImageData(w,h),rd=res.data,cols=new Set();
+  for(let p=0;p<w*h;p++)if(fg[p]){rd[p*4]=q[p*3];rd[p*4+1]=q[p*3+1];rd[p*4+2]=q[p*3+2];rd[p*4+3]=255;cols.add((q[p*3]<<16)|(q[p*3+1]<<8)|q[p*3+2])}
+  const canvas=mkCanvas(w,h);canvas.getContext('2d').putImageData(res,0,0);
+  const palette=[...cols].map(k=>'#'+k.toString(16).padStart(6,'0'));
+  let bgPct=0;for(let p=0;p<w*h;p++)if(!fg[p])bgPct++;
+  return{canvas,w,h,px,py,conf,colors:cols.size,palette,bg,nFix,bgPct:Math.round(bgPct/(w*h)*100)};
+}
+async function pzReadFile(file){
+  const url=URL.createObjectURL(file);
+  try{const im=await loadImg(url),c=mkCanvas(im.naturalWidth,im.naturalHeight),x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0);return x.getImageData(0,0,c.width,c.height)}
+  finally{URL.revokeObjectURL(url)}
+}
+function pzTrim(c){
+  const d=c.getContext('2d').getImageData(0,0,c.width,c.height),b=contentBox(d,c.width,c.height);
+  if(!b)return null;const t=mkCanvas(b.w,b.h);t.getContext('2d').drawImage(c,-b.x,-b.y);return t;
+}
+function pzScaled(c,s){const t=mkCanvas(c.width*s,c.height*s),x=t.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(c,0,0,t.width,t.height);return t}
+const pzBlob=c=>new Promise(r=>c.toBlob(r,'image/png'));
+function pzOutputs(it,p){
+  const s=+p.scale||8,list=[];
+  if(p.save_small)list.push([it.stem+'_pixel.png',it.res.canvas]);
+  if(p.save_big)list.push([it.stem+`_pixel_x${s}.png`,pzScaled(it.res.canvas,s)]);
+  if(p.save_trim){const t=pzTrim(it.res.canvas);if(t)list.push([it.stem+'_pixel_trim.png',t])}
+  return list;
+}
+async function pzSave(items,p,log){
+  let n=0;
+  const all=items.flatMap(it=>pzOutputs(it,p));
+  if(!all.length){log('⚠ 저장할 파일 종류가 하나도 선택되지 않았어요','w');return}
+  if(PZ.dir){
+    try{
+      if((await PZ.dir.queryPermission({mode:'readwrite'}))!=='granted'&&(await PZ.dir.requestPermission({mode:'readwrite'}))!=='granted')throw new Error('폴더에 쓸 권한이 없어요');
+      for(const[name,c]of all){
+        let nm=name,i=2;const stem=name.replace(/\.png$/,'');
+        for(;;){try{await PZ.dir.getFileHandle(nm);nm=`${stem}_${i++}.png`}catch(e){break}}   // 같은 이름이 있으면 _2, _3
+        const fh=await PZ.dir.getFileHandle(nm,{create:true}),wr=await fh.createWritable();await wr.write(await pzBlob(c));await wr.close();n++;
+      }
+      log(`"${PZ.dir.name}" 폴더에 ${n}개 저장했어요`,'g');return;
+    }catch(e){log('폴더에 저장하지 못했어요: '+e.message+' — 다운로드로 받을게요','w')}
+  }
+  for(const[name,c]of all){download(await pzBlob(c),name);n++;await new Promise(r=>setTimeout(r,150))}
+  log(`${n}개 파일을 다운로드했어요`,'g');
+}
+function pzOpenTab(it){
+  const r=it.res,l=mkLayer('레이어 1',r.w,r.h,1);l.cels[0].ctx.drawImage(r.canvas,0,0);touchCel(l.cels[0]);
+  fileHandle=null;setDoc({name:it.stem+'_pixel',w:r.w,h:r.h,layers:[l],active:0,palette:r.palette.slice(0,256)});
+}
+async function pzAddLayer(it){
+  const r=it.res,scale=await askFit(it.file.name,r.w,r.h);if(!scale)return;
+  const l=mkLayer(it.stem+'_pixel',doc.w,doc.h);placeOn(l.ctx,r.canvas,r.w,r.h,scale);touch(l);
+  doc.layers.splice(doc.active+1,0,l);doc.active++;sel=null;setTool('move');commit();fitZoom();
+  toast('변환한 그림을 지금 프레임에 새 레이어로 넣었어요. 이동 도구로 위치를 맞추세요.');
+}
+async function pixelizeDialog(){
+  if(modalOpen)return;
+  stopPlay();if(xf)applyXf();
+  const p=pzPrefs(),dirOK=!!window.showDirectoryPicker;
+  const pm=modal('픽셀아트 변환',`
+  <div class="pz">
+    <div>
+      <div id="pzDrop" tabindex="0" role="button"><b>여기에 그림을 끌어다 놓으세요</b><span>여러 장 가능 · 눌러서 고를 수도 있어요 · PNG, JPG, WEBP</span></div>
+      <input id="pzPick" type="file" accept="image/*" multiple hidden>
+      <ul id="pzList"></ul>
+      <div id="pzLog" aria-live="polite"></div>
+    </div>
+    <div class="pzopt">
+      <div class="row">색 수 <select id="pzColors">${[8,16,24,32,48,64].map(n=>`<option${String(n)===p.colors?' selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="row">칸 크기 <input id="pzCell" type="number" min="2" max="200" step="0.1" placeholder="자동" value="${esc(p.cell)}"> px</div>
+      <div class="note" style="margin-top:-4px">비워두면 자동으로 찾아요. 결과가 이상할 때만 넣으세요.</div>
+      <hr>
+      <label class="row"><input type="checkbox" id="pzBg"${p.remove_bg?' checked':''}> 배경 투명하게</label>
+      <div class="row" id="pzTolRow">허용 오차 <input id="pzTol" type="range" min="2" max="25" step="1" value="${+p.bg_tol||7}"><b id="pzTolV">${+p.bg_tol||7}</b></div>
+      <div class="note" style="margin-top:-4px">배경이 남으면 올리고, 그림이 깎이면 내리세요.</div>
+      <label class="row"><input type="checkbox" id="pzHoles"${p.holes?' checked':''}> 안쪽에 갇힌 배경도 지우기</label>
+      <label class="row"><input type="checkbox" id="pzDesp"${p.despeckle?' checked':''}> 외톨이 점 정리</label>
+      <hr>
+      <div class="mh">PNG로 저장할 때</div>
+      <label class="row"><input type="checkbox" id="pzSmall"${p.save_small?' checked':''}> 실제 크기 (_pixel)</label>
+      <label class="row"><input type="checkbox" id="pzBig"${p.save_big?' checked':''}> 확대본 <select id="pzScale">${[2,4,6,8,10,16].map(n=>`<option value="${n}"${String(n)===p.scale?' selected':''}>${n}배</option>`).join('')}</select></label>
+      <label class="row"><input type="checkbox" id="pzTrim"${p.save_trim?' checked':''}> 여백 자른 버전 (_pixel_trim)</label>
+      ${dirOK?`<div class="row"><button id="pzDir" style="flex:1" title="고른 폴더에 바로 저장해요. 안 고르면 다운로드 폴더로 받아요">저장 폴더 고르기…</button></div><div class="note" id="pzDirName" style="margin-top:-4px">${PZ.dir?'저장 폴더: '+esc(PZ.dir.name):'안 고르면 다운로드 폴더로 받아요'}</div>`:''}
+      <hr>
+      <button id="pzGo" class="primary" style="width:100%">변환 시작</button>
+      <div class="pzall">
+        <button id="pzAllTab">모두 새 탭으로 열기</button>
+        <button id="pzAllSave">모두 PNG로 저장</button>
+        <button id="pzClear">목록 비우기</button>
+      </div>
+    </div>
+  </div>`,[{label:'닫기',value:null}],{wide:true,cls:'pzdlg'});
+  const $$=s=>document.querySelector('#dlg '+s);
+  const getP=()=>({colors:$$('#pzColors').value,scale:$$('#pzScale').value,cell:$$('#pzCell').value.trim(),bg_tol:$$('#pzTol').value,
+    remove_bg:$$('#pzBg').checked,holes:$$('#pzHoles').checked,despeckle:$$('#pzDesp').checked,save_small:$$('#pzSmall').checked,save_big:$$('#pzBig').checked,save_trim:$$('#pzTrim').checked});
+  const logEl=$$('#pzLog');
+  const log=(t,c)=>{const d=document.createElement('div');if(c)d.className=c;d.textContent=t;logEl.append(d);logEl.scrollTop=logEl.scrollHeight};
+  for(const l of PZ.log||[])log(l[0],l[1]);
+  const logKeep=(t,c)=>{(PZ.log=PZ.log||[]).push([t,c]);if(PZ.log.length>200)PZ.log.shift();log(t,c)};
+  const tol=()=>{$$('#pzTolV').textContent=$$('#pzTol').value;$$('#pzTolRow').style.opacity=$$('#pzBg').checked?1:.4};tol();
+  $$('.pz').addEventListener('input',()=>{tol();pzSavePrefs(getP())});$$('.pz').addEventListener('change',()=>{tol();pzSavePrefs(getP())});
+  const list=$$('#pzList');
+  const refresh=()=>{
+    const waiting=PZ.items.filter(i=>i.state!=='done').length,done=PZ.items.filter(i=>i.state==='done').length;
+    $$('#pzGo').disabled=PZ.busy||!waiting;$$('#pzGo').textContent=PZ.busy?'변환 중…':waiting?`변환 시작 (${waiting}장)`:'변환 시작';
+    $$('#pzAllTab').disabled=$$('#pzAllSave').disabled=PZ.busy||!done;$$('#pzClear').disabled=PZ.busy||!PZ.items.length;
+  };
+  const row=it=>{
+    const li=document.createElement('li');it.li=li;
+    const r=it.res;
+    li.innerHTML=`<div class="pzth"><img src="${it.url}" alt="원본">${r?`<canvas title="변환 결과"></canvas>`:''}</div>
+      <div class="pzmid"><div class="pzn" title="${esc(it.file.name)}">${esc(it.file.name)}</div>
+      <div class="pzm">${r?`${r.w}×${r.h}px · ${r.colors}색 · 칸 ${r.px.toFixed(1)}×${r.py.toFixed(1)}px`:it.state==='run'?'변환 중…':it.state==='err'?'⚠ '+esc(it.err):'대기'}</div>
+      ${r?`<div class="pzb"><button data-a="tab">새 탭으로</button><button data-a="layer" title="지금 그림에 새 레이어로 넣어요">레이어로</button><button data-a="save">PNG 저장</button></div>`:''}</div>
+      <button class="pzx" title="목록에서 빼기">×</button>`;
+    if(r){const c=li.querySelector('canvas'),s=Math.min(56/r.w,56/r.h);c.width=Math.max(1,Math.round(r.w*s));c.height=Math.max(1,Math.round(r.h*s));const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(r.canvas,0,0,c.width,c.height)}
+    li.onclick=async e=>{
+      const b=e.target.closest('button');if(!b||PZ.busy)return;
+      if(b.classList.contains('pzx')){PZ.items.splice(PZ.items.indexOf(it),1);li.remove();URL.revokeObjectURL(it.url);refresh();return}
+      const a=b.dataset.a;
+      if(a==='tab'){pzOpenTab(it);b.textContent='✓ 열었어요';logKeep(`"${it.stem}_pixel" 을(를) 새 탭으로 열었어요`,'g')}
+      else if(a==='layer'){pixelizeDialog.next=it;$('#dlg .mbtns button').click()}
+      else if(a==='save')await pzSave([it],getP(),logKeep);
+    };
+    return li;
+  };
+  const redraw=()=>{list.innerHTML='';for(const it of PZ.items)list.append(row(it));refresh()};
+  redraw();
+  const add=files=>{
+    let n=0,skip=0;
+    for(const f of files){if(!/^image\//.test(f.type)&&!/\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name)){skip++;continue}
+      if(PZ.items.some(i=>i.file.name===f.name&&i.file.size===f.size&&i.state!=='done'))continue;
+      PZ.items.push({file:f,url:URL.createObjectURL(f),stem:baseName(f.name),state:'wait'});n++}
+    if(n)logKeep(`그림 ${n}장 추가`);if(skip)logKeep(`그림이 아닌 파일 ${skip}개는 건너뛰었어요`,'w');redraw();
+  };
+  const drop=$$('#pzDrop');
+  drop.onclick=()=>$$('#pzPick').click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$$('#pzPick').click()}};
+  $$('#pzPick').onchange=e=>{add([...e.target.files]);e.target.value=''};
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
+  $('#dlg').ondragover=e=>e.preventDefault();
+  $('#dlg').ondrop=e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('over');dragDepth=0;stage.classList.remove('drop');if(e.dataTransfer.files.length)add([...e.dataTransfer.files])};
+  if(dirOK)$$('#pzDir').onclick=async()=>{try{PZ.dir=await showDirectoryPicker({id:'pixelize',mode:'readwrite'});$$('#pzDirName').textContent='저장 폴더: '+PZ.dir.name;logKeep('저장 폴더: '+PZ.dir.name)}catch(e){}};
+  $$('#pzClear').onclick=()=>{if(PZ.busy)return;for(const i of PZ.items)URL.revokeObjectURL(i.url);PZ.items=[];redraw()};
+  $$('#pzAllTab').onclick=()=>{const d=PZ.items.filter(i=>i.state==='done');for(const it of d)pzOpenTab(it);logKeep(`${d.length}장을 새 탭으로 열었어요`,'g');$('#dlg .mbtns button').click()};
+  $$('#pzAllSave').onclick=()=>pzSave(PZ.items.filter(i=>i.state==='done'),getP(),logKeep);
+  $$('#pzGo').onclick=async()=>{
+    const P=getP(),todo=PZ.items.filter(i=>i.state!=='done');if(!todo.length)return;
+    const o={colors:+P.colors,cell:+P.cell||0,bgTol:+P.bg_tol,removeBg:P.remove_bg,holes:P.holes,despeckle:P.despeckle};
+    PZ.busy=true;refresh();logKeep(`── ${todo.length}장 변환 시작`,'h');let ok=0,fail=0;
+    for(let k=0;k<todo.length;k++){
+      const it=todo[k];it.state='run';const old=it.li;it.li.replaceWith(row(it));
+      const t0=performance.now();
+      try{
+        const img=await pzReadFile(it.file);it.res=await pixelizeImage(img,o);it.state='done';ok++;const r=it.res;
+        logKeep(`[${k+1}/${todo.length}] ${it.file.name}: 칸 ${r.px.toFixed(1)}×${r.py.toFixed(1)}px → ${r.w}×${r.h}px, ${r.colors}색 (${((performance.now()-t0)/1000).toFixed(1)}초)`);
+        if(Math.abs(r.px-r.py)/Math.max(r.px,r.py)>=0.04)logKeep('  ⚠ 원본 칸이 정사각형이 아니라서 가로세로 비율이 원본과 조금 달라요','w');
+        if(!o.cell&&r.conf<0.35)logKeep("  ⚠ 격자가 뚜렷하지 않은 그림이에요. 결과가 이상하면 '칸 크기'를 직접 넣어 보세요",'w');
+      }catch(e){it.state='err';it.err=e.message||String(e);fail++;logKeep(`[${k+1}/${todo.length}] ${it.file.name}: 실패 — ${it.err}`,'e')}
+      if(document.body.contains(it.li))it.li.replaceWith(row(it));
+    }
+    PZ.busy=false;logKeep(`── 끝: 성공 ${ok}장${fail?', 실패 '+fail+'장':''}`,fail?'w':'g');refresh();
+  };
+  await pm;
+  $('#dlg').ondrop=null;$('#dlg').ondragover=null;
+  const nx=pixelizeDialog.next;pixelizeDialog.next=null;
+  if(nx)await pzAddLayer(nx);
+}
+$('#bPixelize').onclick=()=>pixelizeDialog();
+
 /* ---------- 애니메이션 켜기/끄기 ---------- */
 function setAnim(on,silent){
   animOn=on;
@@ -2235,6 +2591,7 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>⇧⌘S / ⌘O</td><td>.pxproj 파일로 저장 / 파일 열기</td></tr>
 <tr><td>⇧B</td><td>마네킹 꺼내기</td></tr>
 <tr><td>⇧T</td><td>애니메이션 타임라인 켜기 / 끄기</td></tr>
+<tr><td>⇧P</td><td>픽셀아트 변환 (AI 그림 → 진짜 픽셀아트)</td></tr>
 <tr><td>⌘C ⌘X ⌘V</td><td>복사 · 잘라내기 · 붙여넣기(새 레이어)</td></tr>
 <tr><td>⌘A / Esc</td><td>전체 선택 / 선택 해제</td></tr>
 <tr><td>Delete / ⌫</td><td>선택 영역 지우기 · 선택이 없으면 지금 레이어 삭제</td></tr>
@@ -2275,6 +2632,7 @@ window.addEventListener('keydown',e=>{
   if(drag)return;
   if(e.shiftKey&&e.code==='KeyT'){setAnim(!animOn);return}
   if(e.shiftKey&&e.code==='KeyB'){basesDialog();return}
+  if(e.shiftKey&&e.code==='KeyP'){pixelizeDialog();return}
   if(animOn&&e.key==='Enter'){e.preventDefault();if(document.activeElement&&document.activeElement.tagName==='BUTTON')document.activeElement.blur();togglePlay();return}
   if(animOn&&e.code==='KeyN'){e.preventDefault();addFrame(!e.shiftKey);return}
   if(animOn&&e.code==='KeyK'){onion.on=!onion.on;$('#onion').checked=onion.on;saveSettings();render();toast('어니언 스킨 '+(onion.on?'켬':'끔'));return}
