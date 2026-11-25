@@ -425,7 +425,7 @@ footer button{padding:2px 8px}
   <span id="saved"></span>
   <span id="ver" style="opacity:.6"></span>
   <button id="bGrid" title="격자 설정 (⌘')">격자 ▾</button>
-  <button id="zOut">−</button><span id="zoomv"></span><button id="zIn">＋</button><button id="zFit">맞춤</button>
+  <button id="zOut">−</button><span id="zoomv"></span><button id="zIn">＋</button><button id="zFit" title="화면에 맞춤 (⌘0 또는 0)">맞춤</button><button id="z100" title="실제 크기 100% (⌘1)">100%</button>
 </footer>
 
 <div id="gridPop" hidden>
@@ -608,7 +608,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.1';
+const APP_VERSION='2026-11-25.2';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -3676,7 +3676,7 @@ $('#bAdd').onclick=addLayer;$('#bDup').onclick=dupLayer;$('#bDel').onclick=delLa
 $('#bSelAll').onclick=()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()};$('#bSelNone').onclick=()=>{sel=null;render()};
 $('#bWorks').onclick=()=>worksDialog();$('#bCloud').onclick=()=>cloudSave();
 $('#bCopy').onclick=()=>copySel();$('#bPaste').onclick=pasteClip;$('#bCut').onclick=cutSel;$('#bClear').onclick=clearSel;$('#bFlipH').onclick=()=>flip(true);$('#bFlipV').onclick=()=>flip(false);
-$('#zIn').onclick=()=>setZoom(zoom+Math.max(1,Math.round(zoom/4)));$('#zOut').onclick=()=>setZoom(zoom-Math.max(1,Math.round(zoom/5)));$('#zFit').onclick=fitZoom;
+$('#zIn').onclick=()=>setZoom(zoom+Math.max(1,Math.round(zoom/4)));$('#zOut').onclick=()=>setZoom(zoom-Math.max(1,Math.round(zoom/5)));$('#zFit').onclick=fitZoom;$('#z100').onclick=()=>setZoom(1);
 $('#name').onchange=e=>{doc.name=e.target.value.trim()||'제목없음';dirty=true;refreshAll();scheduleAutosave()};
 // 타임라인 버튼
 $('#bFirst').onclick=()=>gotoFrame(0);$('#bLast').onclick=()=>gotoFrame(nF()-1);
@@ -3725,6 +3725,7 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>Delete / ⌫</td><td>선택 영역 지우기 · 선택이 없으면 지금 레이어 삭제</td></tr>
 <tr><td>방향키</td><td>선택 영역 또는 레이어를 1칸 이동</td></tr>
 <tr><td>+ &nbsp; − &nbsp; 0</td><td>확대 / 축소 / 화면에 맞춤</td></tr>
+<tr><td>⌘0 / ⌘1</td><td>화면에 맞춤 / 실제 크기(100%)</td></tr>
 <tr><td>Space + 끌기</td><td>화면 옮기기</td></tr>
 <tr><td>우클릭</td><td>그 자리 색 가져오기</td></tr>
 <tr><td colspan="2" style="padding-top:8px;color:var(--accent)">애니메이션 (타임라인이 켜져 있을 때)</td></tr>
@@ -3830,7 +3831,7 @@ window.addEventListener('keydown',e=>{
   if(e.altKey&&!mod&&/^Digit[1-9]$/.test(e.code)){e.preventDefault();switchTab(+e.code.slice(5)-1);return}
   if(e.code==='Space'){e.preventDefault();spaceDown=true;stage.classList.add('pan');return}
   if(mod){
-    const m={KeyZ:()=>e.shiftKey?redo():undo(),KeyY:redo,KeyO:openDialog,KeyC:()=>copySel(),KeyX:cutSel,KeyV:pasteClip,KeyA:()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()},KeyD:()=>{sel=null;render()}}[e.code];
+    const m={Digit0:fitZoom,Digit1:()=>setZoom(1),KeyZ:()=>e.shiftKey?redo():undo(),KeyY:redo,KeyO:openDialog,KeyC:()=>copySel(),KeyX:cutSel,KeyV:pasteClip,KeyA:()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()},KeyD:()=>{sel=null;render()}}[e.code];
     if(m){e.preventDefault();if(!drag)m()}
     return;
   }
