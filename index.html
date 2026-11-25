@@ -205,6 +205,7 @@ footer button{padding:2px 8px}
 #shadeRamp i{width:18px;height:18px;border-radius:3px;border:1px solid rgba(255,255,255,.2);cursor:pointer}
 #shadeRamp .empty{color:var(--muted);font-size:11px;padding:1px 4px}
 #shadeBox .note{color:var(--muted);font-size:11px;margin-top:4px}
+#shadeBox .btns button{overflow:hidden;text-overflow:ellipsis;padding-left:4px;padding-right:4px}
 #gridPop .seg{display:flex;gap:4px}
 #gridPop .seg button{flex:1;padding:5px 4px}
 #bGrid.on{background:var(--panel2);border-color:var(--accent);color:var(--accent);font-weight:600}
@@ -331,8 +332,8 @@ footer button{padding:2px 8px}
   <div class="row" style="margin-top:0"><div class="seg" id="inkSeg"><button data-v="normal" title="그냥 칠해요">보통</button><button data-v="lock" title="이미 칠해진 곳에만 칠해요 (빈 곳은 안 칠해져요)">알파 잠금</button><button data-v="shade" title="묶음 안의 색을 한 칸 어둡게 / 밝게 바꿔요">셰이딩</button></div></div>
   <div id="shadeBox" hidden>
     <div id="shadeRamp"></div>
-    <div class="btns"><button id="shAuto" title="지금 색과 비슷한 계열의 팔레트 색을 밝기 순서로 묶어요">자동 (비슷한 색)</button><button id="shAdd">＋ 지금 색</button><button id="shClear" style="grid-column:1/-1">묶음 비우기</button></div>
-    <div class="note">왼쪽 클릭: 한 칸 어둡게 · 우클릭: 한 칸 밝게<br>팔레트 색을 ⌥+클릭해도 묶음에 넣어요. 묶음 색을 클릭하면 빠져요.</div>
+    <div class="btns"><button id="shAuto" data-tip="지금 색과 비슷한 계열의 팔레트 색을 밝기 순서로 묶어요">자동 묶기</button><button id="shAdd" data-tip="지금 고른 색을 묶음에 넣어요">＋ 지금 색</button><button id="shClear" style="grid-column:1/-1">묶음 비우기</button></div>
+    <div class="note">왼쪽 클릭: 한 칸 어둡게 · 우클릭: 한 칸 밝게<br>팔레트 색을 ⌥+클릭해도 묶음에 넣어요. 묶음 색을 우클릭하면 빠져요.</div>
   </div>
   <div class="row"><label title="사각형·원·선을 그리고 나면 바로 크기·회전을 바꿀 수 있는 틀이 떠요"><input id="autoXf" type="checkbox" checked>도형 그린 뒤 바로 변형</label></div>
   <div id="xfPanel" hidden>
@@ -617,7 +618,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.7';
+const APP_VERSION='2026-11-25.8';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -3222,7 +3223,7 @@ function lumHex(h){const[r,g,b]=hexRGB(h);return .299*r+.587*g+.114*b}
 function sortRamp(){shadeRamp=[...new Set(shadeRamp.map(c=>c.toLowerCase()))].sort((a,b)=>lumHex(a)-lumHex(b))}
 function drawShade(){
   const box=$('#shadeRamp');box.innerHTML=shadeRamp.length?'':'<span class="empty">묶음이 비어 있어요 — 자동 또는 ＋ 지금 색</span>';
-  shadeRamp.forEach(c=>{const i=document.createElement('i');i.style.background=c;i.title=c+' (클릭: 묶음에서 빼기)';i.onclick=()=>{shadeRamp=shadeRamp.filter(x=>x!==c);drawShade();saveSettings()};box.append(i)});
+  shadeRamp.forEach(c=>{const i=document.createElement('i');i.style.background=c;i.dataset.tip=c+' · 클릭: 이 색 고르기 · 우클릭: 묶음에서 빼기';i.onclick=()=>setColor(c);i.oncontextmenu=e=>{e.preventDefault();shadeRamp=shadeRamp.filter(x=>x!==c);drawShade();saveSettings();toast(c+' 을(를) 묶음에서 뺐어요')};box.append(i)});
 }
 function addShade(c){shadeRamp.push(c);sortRamp();drawShade();saveSettings();if(ink!=='shade')setInk('shade');toast(c+' 을(를) 셰이딩 묶음에 넣었어요')}
 function setInk(v){ink=v;document.querySelectorAll('#inkSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('#shadeBox').hidden=v!=='shade';if(v==='shade'&&!shadeRamp.length)autoShade(true);saveSettings()}
