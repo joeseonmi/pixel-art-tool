@@ -374,8 +374,6 @@ footer button{padding:2px 8px}
   <div class="lbtns">
     <button id="bAdd" title="새 레이어 추가" aria-label="새 레이어 추가"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg></button>
     <button id="bDup" title="레이어 복제" aria-label="레이어 복제"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 4H6a2 2 0 0 0-2 2v10"/></svg></button>
-    <button id="bUp" title="위로 올리기" aria-label="위로 올리기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
-    <button id="bDown" title="아래로 내리기" aria-label="아래로 내리기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
     <button id="bMerge" title="아래 레이어와 하나로 합치기 (모든 프레임)" aria-label="아래 레이어와 하나로 합치기 (모든 프레임)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M4 19h16"/></svg></button>
     <button id="bDel" title="레이어 삭제" aria-label="레이어 삭제"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
     <span class="lsep"></span>
@@ -618,7 +616,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.3';
+const APP_VERSION='2026-11-25.4';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -881,7 +879,6 @@ function layerButtons(){
   const s=siblingsOf(l),k=s.indexOf(l),b=belowSibling(l);
   $('#bDel').disabled=doc.layers.filter(x=>!isGroup(x)).length<2&&!isGroup(l);
   $('#bMerge').disabled=isGroup(l)||!b||isGroup(b);
-  $('#bUp').disabled=k>=s.length-1&&!l.parent;$('#bDown').disabled=k<=0&&!l.parent;
   $('#bUngroup').disabled=!isGroup(l);
   renderTilePanel();
 }
@@ -3682,7 +3679,7 @@ $('#blendSel').onchange=e=>{const l=active();if(isGroup(l))return;l.blend=e.targ
 $('#bTM').onclick=addTilemapLayer;$('#bTiles').onclick=tilesFromImage;$('#tNew').onclick=addBlankTile;$('#tDel').onclick=delTile;$('#tGodot').onclick=godotTileExport;
 $('#tEdit').onchange=e=>{tileEdit=e.target.checked;toast(tileEdit?'타일 고치기 켬: 그리면 같은 타일이 다 같이 바뀌어요':'타일 고치기 끔: 연필로 타일을 찍어요')};
 $('#bGroup').onclick=addGroup;$('#bUngroup').onclick=ungroup;$('#bFLink').onclick=()=>addFrame(true,true);$('#bLink').onclick=linkCels;$('#bUnlink').onclick=unlinkCels;
-$('#bAdd').onclick=addLayer;$('#bDup').onclick=dupLayer;$('#bDel').onclick=delLayer;$('#bUp').onclick=()=>moveLayer(1);$('#bDown').onclick=()=>moveLayer(-1);$('#bMerge').onclick=mergeDown;
+$('#bAdd').onclick=addLayer;$('#bDup').onclick=dupLayer;$('#bDel').onclick=delLayer;$('#bMerge').onclick=mergeDown;
 $('#bSelAll').onclick=()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()};$('#bSelNone').onclick=()=>{sel=null;render()};
 $('#bWorks').onclick=()=>worksDialog();$('#bCloud').onclick=()=>cloudSave();
 $('#bCopy').onclick=()=>copySel();$('#bPaste').onclick=pasteClip;$('#bCut').onclick=cutSel;$('#bClear').onclick=clearSel;$('#bFlipH').onclick=()=>flip(true);$('#bFlipV').onclick=()=>flip(false);
@@ -3716,7 +3713,7 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>U (슬라이스)</td><td>끌어서 만들기 · 안쪽 끌어 이동 · 모서리로 크기 · 두 번 클릭으로 이름·9-slice · ⌫ 지우기</td></tr>
 <tr><td>타일맵 레이어</td><td>연필: 고른 타일 찍기 · 지우개: 칸 비우기 · 페인트통: 이어진 칸 채우기 · 우클릭/스포이드: 그 칸 타일 고르기</td></tr>
 <tr><td>⌘ + 그림 클릭</td><td>그 자리에 그림이 있는 맨 위 레이어 고르기 (이동 도구는 그냥 클릭)</td></tr>
-<tr><td>레이어 끌기</td><td>레이어 순서 바꾸기</td></tr>
+<tr><td>레이어 끌기</td><td>레이어 순서 바꾸기 (그룹 가운데에 놓으면 그룹 안으로)</td></tr>
 <tr><td>⌥[ &nbsp; ⌥] &nbsp; ⌥1~9</td><td>이전 / 다음 / 번호 탭으로</td></tr>
 <tr><td>⌥W · 가운데 클릭</td><td>탭 닫기 (내 작업에는 남아 있어요)</td></tr>
 <tr><td>변형 중</td><td>Enter 적용 · Esc 취소 · 방향키 1칸 이동 · Shift 비율 유지/15°</td></tr>
