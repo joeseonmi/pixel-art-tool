@@ -618,7 +618,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.5';
+const APP_VERSION='2026-11-25.6';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -815,11 +815,12 @@ function draw(){
   }
   if(grid.tile!=='none')drawTileGrid(W,H,z);
   if(sym!=='none'){const S=SYMS[sym];vctx.save();vctx.strokeStyle='rgba(30,126,240,.75)';vctx.lineWidth=2;vctx.beginPath();
-    if(S.includes('h')){vctx.moveTo(W/2,0);vctx.lineTo(W/2,H)}
-    if(S.includes('v')){vctx.moveTo(0,H/2);vctx.lineTo(W,H/2)}
+    const AX=symAx()*z,AY=symAy()*z;
+    if(S.includes('h')){vctx.moveTo(AX,0);vctx.lineTo(AX,H)}
+    if(S.includes('v')){vctx.moveTo(0,AY);vctx.lineTo(W,AY)}
     const r=Math.max(W,H);
-    if(S.includes('d1')){vctx.moveTo(W/2-r,H/2-r);vctx.lineTo(W/2+r,H/2+r)}
-    if(S.includes('d2')){vctx.moveTo(W/2+r,H/2-r);vctx.lineTo(W/2-r,H/2+r)}
+    if(S.includes('d1')){vctx.moveTo(AX-r,AY-r);vctx.lineTo(AX+r,AY+r)}
+    if(S.includes('d2')){vctx.moveTo(AX+r,AY-r);vctx.lineTo(AX-r,AY+r)}
     vctx.stroke();vctx.restore()}
   if(sel){
     vctx.lineWidth=1;
@@ -1327,10 +1328,31 @@ function xfMove(e,p){
   xfUpdate();
   const cs=xfCorners();$('#coords').textContent=`${Math.round(Math.abs(xf.w*xf.sx))} × ${Math.round(Math.abs(xf.h*xf.sy))} · ${xf.angle}°`;
 }
+// 대칭축 손잡이: 캔버스 바깥 위쪽(세로축)·왼쪽(가로축)의 삼각형
+function symHandles(){
+  if(sym==='none'||!doc)return[];
+  const S=SYMS[sym],diag=S.includes('d1')||S.includes('d2'),ox=view.offsetLeft,oy=view.offsetTop,out=[];
+  if(S.includes('h')||diag)out.push({axis:'x',x:ox+symAx()*zoom,y:oy-12});
+  if(S.includes('v')||diag)out.push({axis:'y',x:ox-12,y:oy+symAy()*zoom});
+  return out;
+}
+function drawSymHandles(){
+  for(const h of symHandles()){
+    ovx.beginPath();
+    if(h.axis==='x'){ovx.moveTo(h.x-8,h.y-7);ovx.lineTo(h.x+8,h.y-7);ovx.lineTo(h.x,h.y+7)}
+    else{ovx.moveTo(h.x-7,h.y-8);ovx.lineTo(h.x-7,h.y+8);ovx.lineTo(h.x+7,h.y)}
+    ovx.closePath();ovx.fillStyle='#1e7ef0';ovx.fill();ovx.lineWidth=1.5;ovx.strokeStyle='#fff';ovx.stroke();
+  }
+}
+function symHit(e){
+  const r=pad.getBoundingClientRect(),px=e.clientX-r.left+pad.scrollLeft,py=e.clientY-r.top+pad.scrollTop;
+  return symHandles().find(h=>Math.abs(px-h.x)<=11&&Math.abs(py-h.y)<=11)||null;
+}
 function drawOverlay(){
   const pw=pad.clientWidth,ph=pad.clientHeight;
   if(ov.width!==pw||ov.height!==ph){ov.width=pw;ov.height=ph;ov.style.width=pw+'px';ov.style.height=ph+'px'}
   ovx.clearRect(0,0,pw,ph);
+  drawSymHandles();
   if(!xf)return;
   const ox=view.offsetLeft,oy=view.offsetTop,S=q=>({x:ox+q.x*zoom,y:oy+q.y*zoom});
   const cs=xfCorners().map(S),H=xfHandles();
@@ -1493,10 +1515,13 @@ function layerAt(p,skipBase){
 }
 // 대칭: 그 점을 거울처럼 옮긴 점들 (가운데 기준)
 const SYMS={none:[],h:['h'],v:['v'],hv:['h','v'],d1:['d1'],d2:['d2'],dd:['d1','d2'],all:['h','v','d1','d2']};
+// 대칭축 위치 (픽셀 경계 기준, 0.5칸 단위). 없으면 가운데
+function symAx(){return doc.symX==null?doc.w/2:Math.max(0,Math.min(doc.w,doc.symX))}
+function symAy(){return doc.symY==null?doc.h/2:Math.max(0,Math.min(doc.h,doc.symY))}
 function symPts(x,y){
   if(sym==='none')return[[x,y]];
-  const W=doc.w,H=doc.h,cx=(W-1)/2,cy=(H-1)/2,T=SYMS[sym],out=[[x,y]],seen=new Set([x+','+y]);
-  const f={h:(a,b)=>[W-1-a,b],v:(a,b)=>[a,H-1-b],d1:(a,b)=>[Math.round(cx+(b-cy)),Math.round(cy+(a-cx))],d2:(a,b)=>[Math.round(cx-(b-cy)),Math.round(cy-(a-cx))]};
+  const W=doc.w,H=doc.h,cx=symAx()-.5,cy=symAy()-.5,T=SYMS[sym],out=[[x,y]],seen=new Set([x+','+y]);
+  const f={h:(a,b)=>[2*cx-a,b],v:(a,b)=>[a,2*cy-b],d1:(a,b)=>[Math.round(cx+(b-cy)),Math.round(cy+(a-cx))],d2:(a,b)=>[Math.round(cx-(b-cy)),Math.round(cy-(a-cx))]};
   for(let i=0;i<out.length&&out.length<16;i++)for(const t of T){const q=f[t](out[i][0],out[i][1]),k=q[0]+','+q[1];if(!seen.has(k)){seen.add(k);out.push(q)}}
   return out;
 }
@@ -1601,7 +1626,9 @@ function applyMove(m,dx,dy){
   if(m.selOrig)sel={...m.selOrig,x:m.selOrig.x+dx,y:m.selOrig.y+dy};
 }
 pad.addEventListener('contextmenu',e=>e.preventDefault());
-pad.addEventListener('dblclick',e=>{if(tool!=='slice'||modalOpen)return;const h=slcHit(docF(e));if(h)slcProps(h.i)});
+pad.addEventListener('dblclick',e=>{
+  if(!modalOpen&&sym!=='none'){const h=symHit(e);if(h){if(h.axis==='x')doc.symX=null;else doc.symY=null;scheduleAutosave();render();toast('대칭축을 가운데로 돌렸어요');return}}
+  if(tool!=='slice'||modalOpen)return;const h=slcHit(docF(e));if(h)slcProps(h.i)});
 pad.addEventListener('pointerdown',e=>{
   if(modalOpen){
     // 색 바꾸기 창이 떠 있을 때 캔버스를 누르면 그 자리(필터 전) 색을 골라요
@@ -1609,6 +1636,7 @@ pad.addEventListener('pointerdown',e=>{
     return}
   if(e.button===1||spaceDown){pan={x:e.clientX,y:e.clientY,sl:stage.scrollLeft,st:stage.scrollTop};capture(pad,e);return}
   if(playing)stopPlay();
+  if(e.button===0&&sym!=='none'){const h=symHit(e);if(h){drag={t:'sym',axis:h.axis};capture(pad,e);return}}
   const p=pos(e);
   if(xf&&e.button===0){if(xfDown(e,docF(e)))return;applyXf();if(tool==='transform')return}
   if(tool==='slice'&&e.button===0){capture(pad,e);slcDown(e,p);return}
@@ -1663,6 +1691,12 @@ pad.addEventListener('pointermove',e=>{
   const p=pos(e);hover=p;
   {const cur=xf?xfCursor(xfHit(docF(e))):'';pad.style.cursor=cur;view.style.cursor=cur||''}
   $('#coords').textContent=(p.x>=0&&p.y>=0&&p.x<doc.w&&p.y<doc.h)?`x ${p.x}, y ${p.y}`:'–';
+  if(!drag&&sym!=='none'){const h=symHit(e);if(h){pad.style.cursor=h.axis==='x'?'ew-resize':'ns-resize';view.style.cursor='';hover=null}}
+  if(drag&&drag.t==='sym'){
+    const f=docF(e);
+    if(drag.axis==='x')doc.symX=Math.max(0,Math.min(doc.w,Math.round(f.x*2)/2));else doc.symY=Math.max(0,Math.min(doc.h,Math.round(f.y*2)/2));
+    $('#coords').textContent=drag.axis==='x'?`대칭축 x ${symAx()}`:`대칭축 y ${symAy()}`;render();return;
+  }
   if(drag){
     const l=active();
     if(drag.t==='slc')slcMove(p);
@@ -1687,6 +1721,7 @@ function endDrag(){
   if(xfDrag){xfDrag=null;render();return}
   if(!drag)return;
   const d=drag;drag=null;inkBase=null;
+  if(d.t==='sym'){scheduleAutosave();render();return}
   if(d.t==='select'){if(d.op&&d.op!=='set')sel=combineSel(d.prev,d.moved?sel:null,d.op);render();return}
   if(d.t==='lasso'){sel=combineSel(d.prev,lassoToSel(d.pts),d.op||'set');if(sel)$('#coords').textContent=`${sel.w} × ${sel.h}`;render();return}
   if(d.t==='move'&&!d.moved){render();return}
@@ -2154,6 +2189,7 @@ async function resizeDialog(){
 function toProject(){
   return{app:'pixel-art-tool',version:2,name:doc.name,width:doc.w,height:doc.h,palette,active:doc.active,frame:doc.frame,
     ...(doc.slices&&doc.slices.length?{slices:doc.slices}:{}),
+    ...(doc.symX!=null?{symX:doc.symX}:{}),...(doc.symY!=null?{symY:doc.symY}:{}),
     ...(doc.tileset?{tileset:{tw:doc.tileset.tw,th:doc.tileset.th,tiles:doc.tileset.tiles.map((t,i)=>tileCanvas(i).toDataURL('image/png'))}}:{}),
     frames:doc.frames.map(f=>({duration:f.duration})),tags:doc.tags.map(t=>({name:t.name,from:t.from,to:t.to,direction:t.direction,loop:t.loop!==false,color:t.color})),
     layers:doc.layers.map(l=>{const cels=l.cels.map((c,f)=>{const j=linkOf(l,f);return j<f?{link:j}:celEmpty(c)?null:c.canvas.toDataURL('image/png')});
@@ -2195,7 +2231,7 @@ async function parseProject(o){
   });
   const slices=(Array.isArray(o.slices)?o.slices:[]).filter(s=>s&&s.w>0&&s.h>0).map((s,i)=>({name:String(s.name||'슬라이스 '+(i+1)),x:s.x|0,y:s.y|0,w:s.w|0,h:s.h|0,
     center:s.center&&s.center.w>0&&s.center.h>0?{x:s.center.x|0,y:s.center.y|0,w:s.center.w|0,h:s.center.h|0}:null,pivot:s.pivot?{x:s.pivot.x|0,y:s.pivot.y|0}:null,color:/^#[0-9a-f]{6}$/i.test(s.color)?s.color:'#4aa8ff'}));
-  return{slices,tileset,name:o.name||'제목없음',w,h,layers,frames,tags,frame:Math.max(0,Math.min(o.frame|0,n-1)),active:Math.max(0,Math.min(o.active|0,layers.length-1)),palette:Array.isArray(o.palette)?o.palette.filter(c=>/^#[0-9a-f]{6}$/i.test(c)):null};
+  return{symX:typeof o.symX==='number'?o.symX:null,symY:typeof o.symY==='number'?o.symY:null,slices,tileset,name:o.name||'제목없음',w,h,layers,frames,tags,frame:Math.max(0,Math.min(o.frame|0,n-1)),active:Math.max(0,Math.min(o.active|0,layers.length-1)),palette:Array.isArray(o.palette)?o.palette.filter(c=>/^#[0-9a-f]{6}$/i.test(c)):null};
 }
 /* ---------- 탭 (열린 작업 여러 개) ---------- */
 const TABS_KEY='pxtool-tabs';
@@ -2266,7 +2302,7 @@ function setDoc(d,opts){
   }
   if(cur<0){tabs.push({});cur=tabs.length-1}
   xf=null;xfDrag=null;showXfPanel();
-  doc={pid:d.pid||newPid(),name:d.name,w:d.w,h:d.h,layers:d.layers,active:d.active,frames:d.frames||[{duration:DEFAULT_DUR}],tags:d.tags||[],frame:d.frame||0,tileset:d.tileset||null,slices:d.slices||[]};curSlc=-1;
+  doc={pid:d.pid||newPid(),name:d.name,w:d.w,h:d.h,layers:d.layers,active:d.active,frames:d.frames||[{duration:DEFAULT_DUR}],tags:d.tags||[],frame:d.frame||0,tileset:d.tileset||null,slices:d.slices||[],symX:typeof d.symX==='number'?d.symX:null,symY:typeof d.symY==='number'?d.symY:null};curSlc=-1;
   try{localStorage.setItem(LAST_KEY,doc.pid)}catch(e){}
   palette=d.palette&&d.palette.length?d.palette:[...palette];drawPalette();   // 탭마다 팔레트를 따로 가져요
   sel=null;fsel={a:doc.frame,b:doc.frame};loopTag=-1;$('#name').value=doc.name;resetHistory();fitZoom();pvTick();
@@ -3179,7 +3215,7 @@ $('#snapBrush').onchange=e=>{snapBrush=e.target.checked;saveSettings();render()}
 $('#fillShape').onchange=e=>fillShape=e.target.checked;
 function setPP(on,say){pixPerfect=!!on;$('#pixPerfect').checked=pixPerfect;$('#ppOff').checked=!pixPerfect;$('#ppNote').hidden=!(pixPerfect&&brush>1);saveSettings();if(say)toast('픽셀 퍼펙트 '+(pixPerfect?'켬 (굵기 1 연필·지우개)':'끔'))}
 $('#ppRow').onchange=e=>{if(e.target.name==='ppMode')setPP(e.target.value==='1',true)};
-$('#symSel').onchange=e=>{sym=e.target.value;saveSettings();render();if(sym.startsWith('d')||sym==='all')if(doc.w!==doc.h)toast('대각선 대칭은 정사각형 캔버스에서 가장 정확해요')};
+$('#symSel').onchange=e=>{sym=e.target.value;saveSettings();render();if(sym!=='none')toast('캔버스 바깥의 파란 삼각형을 끌면 대칭축이 옮겨져요 · 두 번 클릭하면 가운데로');if(sym.startsWith('d')||sym==='all')if(doc.w!==doc.h)toast('대각선 대칭은 정사각형 캔버스에서 가장 정확해요')};
 function lumHex(h){const[r,g,b]=hexRGB(h);return .299*r+.587*g+.114*b}
 function sortRamp(){shadeRamp=[...new Set(shadeRamp.map(c=>c.toLowerCase()))].sort((a,b)=>lumHex(a)-lumHex(b))}
 function drawShade(){
@@ -3734,6 +3770,7 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>Delete / ⌫</td><td>선택 영역 지우기 · 선택이 없으면 지금 레이어 삭제</td></tr>
 <tr><td>방향키</td><td>선택 영역 또는 레이어를 1칸 이동</td></tr>
 <tr><td>+ &nbsp; − &nbsp; 0</td><td>확대 / 축소 / 화면에 맞춤</td></tr>
+<tr><td>대칭 켰을 때</td><td>캔버스 바깥 파란 삼각형 끌기: 대칭축 옮기기 · 두 번 클릭: 가운데로</td></tr>
 <tr><td>⌘0 / ⌘1</td><td>화면에 맞춤 / 실제 크기(100%)</td></tr>
 <tr><td>Space + 끌기</td><td>화면 옮기기</td></tr>
 <tr><td>우클릭</td><td>그 자리 색 가져오기</td></tr>
