@@ -15,6 +15,13 @@
 :root{--bg:#282828;--panel:#323232;--panel2:#3d3d3d;--line:#4a4a4a;--text:#e6e6e6;--muted:#a6a6a6;--accent:#1e7ef0;--accent-ink:#ffffff;--danger:#ff7b7b}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+/* 스크롤 막대: 진한 회색 */
+*{scrollbar-color:#4a4a4a transparent}
+::-webkit-scrollbar{width:10px;height:10px;background:transparent}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#454545;border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#5a5a5a;background-clip:padding-box}
+::-webkit-scrollbar-corner{background:transparent}
 html,body{height:100%;margin:0}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 body{-webkit-touch-callout:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
@@ -663,7 +670,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.12';
+const APP_VERSION='2026-11-25.13';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
