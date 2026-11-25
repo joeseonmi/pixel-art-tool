@@ -241,6 +241,7 @@ footer button{padding:2px 8px}
 .lbtns button{width:32px;height:30px;padding:0;display:grid;place-items:center}
 .lbtns svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lbtns .lsep{width:1px;height:20px;background:var(--line);margin:0 2px}
+#tip{position:fixed;z-index:30;max-width:240px;padding:5px 9px;border-radius:6px;background:#111;color:#f2f2f2;font-size:12px;line-height:1.4;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5);white-space:normal}
 /* 미리보기 창 (PIP) */
 #pip{position:fixed;z-index:9;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.55);overflow:hidden}
 #pipBar{display:flex;align-items:center;gap:4px;padding:4px 6px 4px 10px;border-bottom:1px solid var(--line);cursor:move;touch-action:none}
@@ -372,15 +373,15 @@ footer button{padding:2px 8px}
   <div class="row"><span>불투명도</span><input id="opacity" type="range" min="0" max="100" value="100"><span id="opv">100</span></div>
   <div class="row"><span>섞기</span><select id="blendSel" style="flex:1;min-width:0" title="아래 레이어와 섞는 방법"></select></div>
   <div class="lbtns">
-    <button id="bAdd" title="새 레이어 추가" aria-label="새 레이어 추가"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg></button>
-    <button id="bDup" title="레이어 복제" aria-label="레이어 복제"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 4H6a2 2 0 0 0-2 2v10"/></svg></button>
-    <button id="bMerge" title="아래 레이어와 하나로 합치기 (모든 프레임)" aria-label="아래 레이어와 하나로 합치기 (모든 프레임)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M4 19h16"/></svg></button>
-    <button id="bDel" title="레이어 삭제" aria-label="레이어 삭제"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
+    <button id="bAdd" data-tip="새 레이어 추가" aria-label="새 레이어 추가"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg></button>
+    <button id="bDup" data-tip="레이어 복제" aria-label="레이어 복제"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 4H6a2 2 0 0 0-2 2v10"/></svg></button>
+    <button id="bMerge" data-tip="아래 레이어와 하나로 합치기 (모든 프레임)" aria-label="아래 레이어와 하나로 합치기 (모든 프레임)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M4 19h16"/></svg></button>
+    <button id="bDel" data-tip="레이어 삭제" aria-label="레이어 삭제"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
     <span class="lsep"></span>
-    <button id="bGroup" title="새 그룹에 넣기" aria-label="새 그룹에 넣기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/></svg></button>
-    <button id="bUngroup" title="그룹 풀기 (안의 레이어는 남겨요)" aria-label="그룹 풀기 (안의 레이어는 남겨요)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 13h6"/></svg></button>
-    <button id="bTM" title="타일맵 레이어 추가 (타일을 찍어서 맵 그리기)" aria-label="타일맵 레이어 추가 (타일을 찍어서 맵 그리기)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg></button>
-    <button id="bTiles" title="타일로 자르기 (지금 레이어나 보이는 그림을 타일맵으로)" aria-label="타일로 자르기 (지금 레이어나 보이는 그림을 타일맵으로)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 13h7v7h-7z"/><path d="M14 4h6v6M4 14v6h6" stroke-dasharray="2 2"/></svg></button>
+    <button id="bGroup" data-tip="새 그룹에 넣기" aria-label="새 그룹에 넣기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/></svg></button>
+    <button id="bUngroup" data-tip="그룹 풀기 (안의 레이어는 남겨요)" aria-label="그룹 풀기 (안의 레이어는 남겨요)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 13h6"/></svg></button>
+    <button id="bTM" data-tip="타일맵 레이어 추가 (타일을 찍어서 맵 그리기)" aria-label="타일맵 레이어 추가 (타일을 찍어서 맵 그리기)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg></button>
+    <button id="bTiles" data-tip="타일로 자르기 (지금 레이어나 보이는 그림을 타일맵으로)" aria-label="타일로 자르기 (지금 레이어나 보이는 그림을 타일맵으로)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 13h7v7h-7z"/><path d="M14 4h6v6M4 14v6h6" stroke-dasharray="2 2"/></svg></button>
   </div>
   <div id="tilePanel" hidden>
     <h4>타일 <span id="tInfo" style="font-weight:400"></span></h4>
@@ -457,6 +458,7 @@ footer button{padding:2px 8px}
 </div>
 <div id="back" hidden><div id="dlg"></div></div>
 <div id="toast"></div>
+<div id="tip" hidden></div>
 <input id="fOpen" type="file" accept=".pxproj,.json,.aseprite,.ase,image/*" multiple hidden>
 <input id="fImport" type="file" accept=".pxproj,.json,.aseprite,.ase,image/*" multiple hidden>
 
@@ -616,7 +618,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.4';
+const APP_VERSION='2026-11-25.5';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -3820,6 +3822,26 @@ pipDragOn($('#pipBar'),(dx,dy,s)=>{PIP.x=s.px+dx;PIP.y=s.py+dy});
 pipDragOn($('#pipGrip'),(dx,dy,s)=>{PIP.w=s.w+dx;PIP.h=s.h+dy});
 addEventListener('resize',()=>{if(!pip.hidden){pipPlace();pipDraw()}});
 pipShow(!!PIP.open);
+
+/* ---------- 말풍선 도움말 (data-tip) ---------- */
+{
+  const tip=$('#tip');let tipT=0,tipEl=null;
+  const hideTip=()=>{clearTimeout(tipT);tipEl=null;tip.hidden=true};
+  document.addEventListener('pointerover',e=>{
+    const el=e.target.closest&&e.target.closest('[data-tip]');
+    if(el===tipEl)return;hideTip();if(!el||e.pointerType==='touch')return;tipEl=el;
+    tipT=setTimeout(()=>{
+      if(tipEl!==el)return;tip.textContent=el.dataset.tip;tip.hidden=false;
+      const r=el.getBoundingClientRect(),t=tip.getBoundingClientRect();
+      let x=r.left+r.width/2-t.width/2,y=r.top-t.height-6;
+      if(y<4)y=r.bottom+6;x=Math.max(4,Math.min(innerWidth-t.width-4,x));
+      tip.style.left=x+'px';tip.style.top=y+'px';
+    },250);
+  });
+  document.addEventListener('pointerout',e=>{if(tipEl&&!tipEl.contains(e.relatedTarget))hideTip()});
+  document.addEventListener('pointerdown',hideTip,true);
+  addEventListener('blur',hideTip);
+}
 
 /* ---------- 키보드 ---------- */
 window.addEventListener('keydown',e=>{
