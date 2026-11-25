@@ -221,6 +221,7 @@ footer button{padding:2px 8px}
 #inkSeg button{padding:5px 1px;font-size:11.5px;letter-spacing:-.02em;white-space:nowrap}
 #gradStops{display:flex;flex-wrap:wrap;gap:3px;min-height:22px;margin:0 0 6px;padding:3px;border:1px dashed var(--line);border-radius:6px}
 #gradStops i{width:18px;height:18px;border-radius:3px;border:1px solid rgba(255,255,255,.25);cursor:pointer}
+#gradStops i.tr{background:repeating-conic-gradient(#c9cbd1 0 25%,#f1f2f4 0 50%) 0 0/8px 8px!important}
 #gradStops i.cur{outline:2px solid var(--accent);outline-offset:1px}
 #gradBar{height:12px;border-radius:3px;margin:0 0 6px;image-rendering:pixelated;width:100%}
 #shadeRamp{display:flex;flex-wrap:wrap;gap:3px;min-height:22px;margin:6px 0;padding:3px;border:1px dashed var(--line);border-radius:6px}
@@ -378,7 +379,7 @@ footer button{padding:2px 8px}
     <h4>그라데이션</h4>
     <canvas id="gradBar" width="120" height="6" data-tip="미리보기 (지금 패턴)"></canvas>
     <div id="gradStops"></div>
-    <div class="btns"><button id="gAdd" data-tip="지금 고른 색을 끝에 넣어요">＋ 지금 색</button><button id="gRev" data-tip="색 순서를 거꾸로">↔ 뒤집기</button><button id="gRamp" style="grid-column:1/-1" data-tip="잉크의 음영 단계 색들을 그대로 가져와요">음영 단계 가져오기</button></div>
+    <div class="btns"><button id="gAdd" data-tip="지금 고른 색을 끝에 넣어요">＋ 지금 색</button><button id="gTr" data-tip="투명 칸을 끝에 넣어요. 그 부분은 원래 그림 그대로 남아요 (빈 레이어면 투명)">＋ 투명</button><button id="gRev" data-tip="색 순서를 거꾸로">↔ 뒤집기</button><button id="gRamp" data-tip="잉크의 음영 단계 색들을 그대로 가져와요">음영 단계</button></div>
     <div class="row"><span>패턴</span><select id="gDither" style="flex:1;min-width:0">
       <option value="none">없음 (딱 끊기)</option><option value="b2">바이어 2×2 (촘촘)</option><option value="b4">바이어 4×4</option><option value="b8">바이어 8×8 (부드럽게)</option>
       <option value="lines">가로줄</option><option value="checker">체크무늬</option><option value="cluster">다이아 점</option><option value="noise">흩뿌리기</option><option value="sparkle">반짝이</option></select></div>
@@ -670,7 +671,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.13';
+const APP_VERSION='2026-11-25.14';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -3819,7 +3820,7 @@ $('#onNext').onchange=e=>{onion.next=Math.max(0,Math.min(5,+e.target.value|0));e
 $('#onTint').onchange=e=>{onion.tint=e.target.checked;saveSettings();render()};
 $('#pvPlay').onchange=()=>{pvSeqI=0;pvTick()};$('#pvZoom').onchange=()=>{pvTick();render()};
 function saveSettings(){try{localStorage.setItem('pixelart-tool-anim-settings',JSON.stringify({onion,animOn,exportScale,grid,autoXf,fingerDraw,snapBrush,pixPerfect,sym,ink,shadeRamp,gradStops,gradDither,gradShape}))}catch(e){}}
-function loadSettings(){try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(Array.isArray(s.gradStops))gradStops=s.gradStops.filter(c=>/^#[0-9a-f]{6}$/i.test(c));if(s.gradDither in DITHERS)gradDither=s.gradDither;if(['linear','radial'].includes(s.gradShape))gradShape=s.gradShape;if(s.onion)Object.assign(onion,s.onion);animOn=!!s.animOn;if([1,2,4,8,16].includes(s.exportScale))exportScale=s.exportScale;if(s.grid)Object.assign(grid,s.grid);if(typeof s.autoXf==='boolean')autoXf=s.autoXf;snapBrush=!!s.snapBrush;if(typeof s.fingerDraw==='boolean')fingerDraw=s.fingerDraw}catch(e){}
+function loadSettings(){try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(Array.isArray(s.gradStops))gradStops=s.gradStops.filter(c=>c==='transparent'||/^#[0-9a-f]{6}$/i.test(c));if(s.gradDither in DITHERS)gradDither=s.gradDither;if(['linear','radial'].includes(s.gradShape))gradShape=s.gradShape;if(s.onion)Object.assign(onion,s.onion);animOn=!!s.animOn;if([1,2,4,8,16].includes(s.exportScale))exportScale=s.exportScale;if(s.grid)Object.assign(grid,s.grid);if(typeof s.autoXf==='boolean')autoXf=s.autoXf;snapBrush=!!s.snapBrush;if(typeof s.fingerDraw==='boolean')fingerDraw=s.fingerDraw}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(typeof s.pixPerfect==='boolean')pixPerfect=s.pixPerfect;if(SYMS[s.sym])sym=s.sym;if(Array.isArray(s.shadeRamp))shadeRamp=s.shadeRamp.filter(c=>/^#[0-9a-f]{6}$/i.test(c));if(['normal','lock','shade'].includes(s.ink))ink=s.ink}catch(e){}
   try{$('#pixPerfect').checked=pixPerfect;$('#ppOff').checked=!pixPerfect;$('#symSel').value=sym;drawShade();setInk(ink)}catch(e){}
   $('#autoXf').checked=autoXf;$('#snapBrush').checked=snapBrush;refreshGridUI();
@@ -3966,12 +3967,12 @@ function gradIndex(t,x,y,n){
 }
 function drawGrad(ctx,a,b,base){
   const W=doc.w,out=new ImageData(new Uint8ClampedArray(base.data),W,doc.h),d=out.data,bd=base.data;
-  const st=gradStops.map(hexRGB),n=st.length,ax=a.x+.5,ay=a.y+.5,dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy,L=Math.sqrt(L2),lock=ink==='lock';
+  const st=gradStops.map(c=>c==='transparent'?null:hexRGB(c)),n=st.length,ax=a.x+.5,ay=a.y+.5,dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy,L=Math.sqrt(L2),lock=ink==='lock';
   const bb=bounds();
   for(let y=bb.y0;y<bb.y1;y++)for(let x=bb.x0;x<bb.x1;x++){
     if(sel&&sel.mask&&!selHas(x,y))continue;const i=(y*W+x)*4;if(lock&&!bd[i+3])continue;
     let t=0;if(L>0)t=gradShape==='radial'?Math.hypot(x+.5-ax,y+.5-ay)/L:((x+.5-ax)*dx+(y+.5-ay)*dy)/L2;
-    const c=st[gradIndex(Math.max(0,Math.min(1,t)),x,y,n)];d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;
+    const c=st[gradIndex(Math.max(0,Math.min(1,t)),x,y,n)];if(!c)continue;d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;
   }
   ctx.putImageData(out,0,0);
 }
@@ -3981,14 +3982,15 @@ function gradDefault(){
 }
 function drawGradUI(){
   const box=$('#gradStops');box.innerHTML=gradStops.length?'':'<span class="note" style="margin:0 4px">색이 없어요 — ＋ 지금 색</span>';
-  gradStops.forEach((c,k)=>{const i=document.createElement('i');i.style.background=c;if(c===color)i.className='cur';i.dataset.tip=`${k+1}번째 ${c} · 클릭: 이 색 고르기 · 우클릭: 빼기`;
-    i.onclick=()=>setColor(c);i.oncontextmenu=e=>{e.preventDefault();gradStops.splice(k,1);saveSettings();drawGradUI()};box.append(i)});
+  gradStops.forEach((c,k)=>{const i=document.createElement('i'),tr=c==='transparent';if(tr)i.className='tr';else{i.style.background=c;if(c===color)i.className='cur'}i.dataset.tip=tr?`${k+1}번째 투명 · 우클릭: 빼기`:`${k+1}번째 ${c} · 클릭: 이 색 고르기 · 우클릭: 빼기`;
+    i.onclick=()=>{if(!tr)setColor(c)};i.oncontextmenu=e=>{e.preventDefault();gradStops.splice(k,1);saveSettings();drawGradUI()};box.append(i)});
   $('#gDither').value=gradDither;document.querySelectorAll('#gShape button').forEach(b=>b.classList.toggle('on',b.dataset.v===gradShape));$('#gLock').checked=ink==='lock';
-  const cv=$('#gradBar'),x=cv.getContext('2d'),W=cv.width,H=cv.height,img=x.createImageData(W,H),st=gradStops.map(hexRGB);
-  for(let yy=0;yy<H;yy++)for(let xx=0;xx<W;xx++){const k=(yy*W+xx)*4;if(!st.length)continue;const c=st[gradIndex(W>1?xx/(W-1):0,xx,yy,st.length)];img.data[k]=c[0];img.data[k+1]=c[1];img.data[k+2]=c[2];img.data[k+3]=255}
+  const cv=$('#gradBar'),x=cv.getContext('2d'),W=cv.width,H=cv.height,img=x.createImageData(W,H),st=gradStops.map(c=>c==='transparent'?null:hexRGB(c));
+  for(let yy=0;yy<H;yy++)for(let xx=0;xx<W;xx++){const k=(yy*W+xx)*4;if(!st.length)continue;const c=st[gradIndex(W>1?xx/(W-1):0,xx,yy,st.length)]||(((xx>>1)+(yy>>1))&1?[201,203,209]:[241,242,244]);img.data[k]=c[0];img.data[k+1]=c[1];img.data[k+2]=c[2];img.data[k+3]=255}
   x.putImageData(img,0,0);
 }
 $('#gAdd').onclick=()=>{gradStops.push(color);saveSettings();drawGradUI()};
+$('#gTr').onclick=()=>{gradStops.push('transparent');saveSettings();drawGradUI()};
 $('#gRev').onclick=()=>{gradStops.reverse();saveSettings();drawGradUI()};
 $('#gRamp').onclick=()=>{if(!shadeRamp.length){toast('음영 단계가 비어 있어요. 잉크 → 셰이딩에서 먼저 만들어 주세요');return}gradStops=[...shadeRamp];saveSettings();drawGradUI();toast(`음영 단계 ${gradStops.length}색을 가져왔어요`)};
 $('#gDither').onchange=e=>{gradDither=e.target.value;saveSettings();drawGradUI()};
