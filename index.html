@@ -49,9 +49,14 @@ aside{background:var(--panel);overflow-y:auto;padding:10px}
 .layer.drop-above{box-shadow:inset 0 3px 0 var(--accent)}
 .layer.drop-below{box-shadow:inset 0 -3px 0 var(--accent)}
 h4{margin:14px 0 6px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.grp{background:rgba(0,0,0,.16);border:1px solid #3e3e3e;border-radius:9px;padding:8px 9px 6px;margin-bottom:8px}
+.grp>h4{margin:0 0 6px}
+.grp .row:first-of-type{margin-top:0}
+#left #xfPanel{margin:0 0 8px}
+#ppRow{gap:6px}#ppRow span{white-space:nowrap;margin-right:auto}#ppRow label{gap:3px}
 h4:first-child{margin-top:0}
-.tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-.tools button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:7px 2px 5px}
+.tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.tools button{display:grid;place-items:center;height:34px;padding:0}
 .tools svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 kbd{font:10px ui-monospace,Menlo,monospace;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
 button.on kbd{color:var(--accent-ink);border-color:rgba(255,255,255,.4)}
@@ -314,28 +319,28 @@ footer button{padding:2px 8px}
 <nav id="tabs" aria-label="열린 작업"></nav>
 
 <aside id="left">
+  <section class="grp" id="grpTools">
   <h4>도구</h4>
   <div class="tools" id="tools"></div>
-  <h4>옵션</h4>
-  <div class="row" id="selModeRow" hidden><button id="smRect" title="끌어서 사각형으로 선택">▭ 사각형</button><button id="smLasso" title="마우스로 원하는 모양을 그려서 선택">〰 올가미</button><button id="smPoly" title="클릭해서 꼭짓점을 찍고, 첫 점을 누르거나 두 번 클릭(Enter)하면 닫혀요">⬠ 다각형</button><button id="smWand" title="클릭한 곳과 같은 색 영역을 선택">✦ 마술봉</button></div>
-  <div class="row" id="wandRow" hidden><label title="끄면 그림 전체에서 같은 색을 모두 골라요"><input id="wandCont" type="checkbox" checked>붙어 있는 곳만</label><label title="모든 보이는 레이어를 합친 그림 기준으로 골라요"><input id="wandAll" type="checkbox">모든 레이어 기준</label></div>
-  <div class="row" id="selOpRow" hidden style="color:var(--muted);font-size:11px">⇧ 누르고 선택: 더하기 · ⌥ 누르고 선택: 빼기</div>
-  <div class="row"><span>굵기</span><input id="brush" type="range" min="1" max="16" value="1"><span id="brushv">1</span></div>
-  <div class="row"><label title="굵기가 4면 그림을 4×4 칸으로 나눠서, 커서가 있는 칸 하나를 통째로 칠해요"><input id="snapBrush" type="checkbox">굵기만큼 칸에 맞추기</label></div>
-  <div class="row"><label><input id="fillShape" type="checkbox">도형 속까지 채우기</label></div>
-  <div class="row" id="ppRow" title="연필·지우개(굵기 1)로 그릴 때 ㄱ·ㄴ자로 꺾이는 가운데 점을 자동으로 빼서 선을 부드럽게 이어요"><span>픽셀 퍼펙트</span><label style="flex:none"><input type="radio" name="ppMode" id="ppOff" value="0">끔</label><label style="flex:none"><input type="radio" name="ppMode" id="pixPerfect" value="1">켬</label></div>
-  <div class="row" id="ppNote" style="margin-top:-4px;color:var(--muted);font-size:11px" hidden>굵기 1인 연필·지우개에서만 적용돼요</div>
-  <div class="row"><span>대칭</span><select id="symSel" style="flex:1;min-width:0" title="그린 점을 거울처럼 같이 찍어요">
-    <option value="none">끔</option><option value="h">좌우</option><option value="v">상하</option><option value="hv">좌우 + 상하</option>
-    <option value="d1">대각선 ↘</option><option value="d2">대각선 ↙</option><option value="dd">대각선 둘 다</option><option value="all">전부 (8방향)</option></select><button id="symReset" data-tip="대칭축을 가운데로 (손잡이 두 번 클릭과 같아요)" aria-label="대칭축 가운데로" hidden style="padding:4px 8px">가운데로</button></div>
-  <div class="row" style="margin-bottom:3px"><span>잉크</span></div>
-  <div class="row" style="margin-top:0"><div class="seg" id="inkSeg"><button data-v="normal" title="그냥 칠해요">보통</button><button data-v="lock" title="이미 칠해진 곳에만 칠해요 (빈 곳은 안 칠해져요)">알파 잠금</button><button data-v="shade" title="묶음 안의 색을 한 칸 어둡게 / 밝게 바꿔요">셰이딩</button></div></div>
-  <div id="shadeBox" hidden>
-    <div id="shadeRamp"></div>
-    <div class="btns"><button id="shAuto" data-tip="지금 색으로 어두운 색·밝은 색 단계를 만들어서 팔레트에도 넣어요">자동 만들기</button><button id="shAdd" data-tip="지금 고른 색을 음영 단계에 넣어요">＋ 지금 색</button><button id="shClear" style="grid-column:1/-1">음영 단계 비우기</button></div>
-    <div class="note">위 칸이 <b>음영 단계</b>예요 (어두운 색 → 밝은 색). 그림 위를 왼쪽 클릭하면 한 단계 어둡게, 우클릭하면 한 단계 밝게 바뀌어요.<br>단계 색 클릭: 그 색 고르기 · 우클릭: 빼기 · 팔레트 ⌥+클릭: 넣기</div>
-  </div>
-  <div class="row"><label title="사각형·원·선을 그리고 나면 바로 크기·회전을 바꿀 수 있는 틀이 떠요"><input id="autoXf" type="checkbox" checked>도형 그린 뒤 바로 변형</label></div>
+  </section>
+  <section class="grp" id="grpSel" hidden>
+  <h4>선택 방식</h4>
+    <div class="row" id="selModeRow" hidden><button id="smRect" title="끌어서 사각형으로 선택">▭ 사각형</button><button id="smLasso" title="마우스로 원하는 모양을 그려서 선택">〰 올가미</button><button id="smPoly" title="클릭해서 꼭짓점을 찍고, 첫 점을 누르거나 두 번 클릭(Enter)하면 닫혀요">⬠ 다각형</button><button id="smWand" title="클릭한 곳과 같은 색 영역을 선택">✦ 마술봉</button></div>
+    <div class="row" id="wandRow" hidden><label title="끄면 그림 전체에서 같은 색을 모두 골라요"><input id="wandCont" type="checkbox" checked>붙어 있는 곳만</label><label title="모든 보이는 레이어를 합친 그림 기준으로 골라요"><input id="wandAll" type="checkbox">모든 레이어 기준</label></div>
+    <div class="row" id="selOpRow" hidden style="color:var(--muted);font-size:11px">⇧ 누르고 선택: 더하기 · ⌥ 누르고 선택: 빼기</div>
+  </section>
+  <section class="grp" id="grpBrush">
+  <h4>브러시</h4>
+    <div class="row"><span>굵기</span><input id="brush" type="range" min="1" max="16" value="1"><span id="brushv">1</span></div>
+    <div class="row"><label title="굵기가 4면 그림을 4×4 칸으로 나눠서, 커서가 있는 칸 하나를 통째로 칠해요"><input id="snapBrush" type="checkbox">굵기만큼 칸에 맞추기</label></div>
+    <div class="row" id="ppRow" title="연필·지우개(굵기 1)로 그릴 때 ㄱ·ㄴ자로 꺾이는 가운데 점을 자동으로 빼서 선을 부드럽게 이어요"><span>픽셀 퍼펙트</span><label style="flex:none"><input type="radio" name="ppMode" id="ppOff" value="0">끔</label><label style="flex:none"><input type="radio" name="ppMode" id="pixPerfect" value="1">켬</label></div>
+    <div class="row" id="ppNote" style="margin-top:-4px;color:var(--muted);font-size:11px" hidden>굵기 1인 연필·지우개에서만 적용돼요</div>
+  </section>
+  <section class="grp" id="grpShape">
+  <h4>도형</h4>
+    <div class="row"><label><input id="fillShape" type="checkbox">도형 속까지 채우기</label></div>
+    <div class="row"><label title="사각형·원·선을 그리고 나면 바로 크기·회전을 바꿀 수 있는 틀이 떠요"><input id="autoXf" type="checkbox" checked>도형 그린 뒤 바로 변형</label></div>
+  </section>
   <div id="xfPanel" hidden>
     <h4 style="margin-top:0;color:var(--accent)">변형 중</h4>
     <div class="row"><span>각도</span><input id="xAng" type="number" step="1"> °</div>
@@ -352,10 +357,27 @@ footer button{padding:2px 8px}
     <div class="row"><button id="xApply" class="primary" style="flex:1">적용 (Enter)</button></div>
     <div class="note" style="color:var(--muted);font-size:11px">모서리: 크기 · 바깥쪽 끌기/동그라미: 회전 · 안쪽: 이동<br>Shift: 비율 유지 / 15° 단위</div>
   </div>
-  <h4>색</h4>
-  <div class="row"><input id="color" type="color" value="#1d2b53"><input id="hex" type="text" maxlength="7" spellcheck="false"></div>
-  <div id="palette"></div>
-  <div class="row"><button id="bPalAdd" style="flex:1" title="지금 색을 팔레트에 추가. 팔레트 색을 우클릭하면 삭제">＋ 팔레트에 추가</button></div>
+  <section class="grp" id="grpSym">
+  <h4>대칭</h4>
+    <div class="row"><span>방향</span><select id="symSel" style="flex:1;min-width:0" title="그린 점을 거울처럼 같이 찍어요">
+      <option value="none">끔</option><option value="h">좌우</option><option value="v">상하</option><option value="hv">좌우 + 상하</option>
+      <option value="d1">대각선 ↘</option><option value="d2">대각선 ↙</option><option value="dd">대각선 둘 다</option><option value="all">전부 (8방향)</option></select><button id="symReset" data-tip="대칭축을 가운데로 (손잡이 두 번 클릭과 같아요)" aria-label="대칭축 가운데로" hidden style="padding:4px 8px">가운데로</button></div>
+  </section>
+  <section class="grp" id="grpInk">
+  <h4>잉크</h4>
+    <div class="row" style="margin-top:0"><div class="seg" id="inkSeg"><button data-v="normal" title="그냥 칠해요">보통</button><button data-v="lock" title="이미 칠해진 곳에만 칠해요 (빈 곳은 안 칠해져요)">알파 잠금</button><button data-v="shade" title="묶음 안의 색을 한 칸 어둡게 / 밝게 바꿔요">셰이딩</button></div></div>
+    <div id="shadeBox" hidden>
+      <div id="shadeRamp"></div>
+      <div class="btns"><button id="shAuto" data-tip="지금 색으로 어두운 색·밝은 색 단계를 만들어서 팔레트에도 넣어요">자동 만들기</button><button id="shAdd" data-tip="지금 고른 색을 음영 단계에 넣어요">＋ 지금 색</button><button id="shClear" style="grid-column:1/-1">음영 단계 비우기</button></div>
+      <div class="note">위 칸이 <b>음영 단계</b>예요 (어두운 색 → 밝은 색). 그림 위를 왼쪽 클릭하면 한 단계 어둡게, 우클릭하면 한 단계 밝게 바뀌어요.<br>단계 색 클릭: 그 색 고르기 · 우클릭: 빼기 · 팔레트 ⌥+클릭: 넣기</div>
+    </div>
+  </section>
+  <section class="grp" id="grpColor">
+    <h4>색</h4>
+    <div class="row"><input id="color" type="color" value="#1d2b53"><input id="hex" type="text" maxlength="7" spellcheck="false"></div>
+    <div id="palette"></div>
+    <div class="row"><button id="bPalAdd" style="flex:1" title="지금 색을 팔레트에 추가. 팔레트 색을 우클릭하면 삭제">＋ 팔레트에 추가</button></div>
+  </section>
   <div class="row" id="fingerRow" hidden><label title="끄면 손가락은 화면 이동·확대만, 그리기는 애플펜슬로"><input id="fingerDraw" type="checkbox">손가락으로도 그리기</label></div>
 </aside>
 
@@ -618,7 +640,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.9';
+const APP_VERSION='2026-11-25.10';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -1472,7 +1494,7 @@ function setSelMode(m){
   selMode=m;$('#smRect').classList.toggle('on',m==='rect');$('#smLasso').classList.toggle('on',m==='lasso');$('#smPoly').classList.toggle('on',m==='poly');$('#smWand').classList.toggle('on',m==='wand');
   $('#wandRow').hidden=!(tool==='select'&&m==='wand');
   const b=document.querySelector('#tools button[data-t=select]');
-  if(b){b.querySelector('svg').outerHTML=svgI(m==='lasso'||m==='poly'?'lasso':m==='wand'?'wand':'select');b.title='선택 – '+SELNAME[m]+' (M)'}
+  if(b){b.querySelector('svg').outerHTML=svgI(m==='lasso'||m==='poly'?'lasso':m==='wand'?'wand':'select');b.dataset.tip='선택 – '+SELNAME[m]+' (M)'}
   if(tool==='select')$('#hint').textContent=(SELHINT[m]?SELHINT[m]+' 선택 안쪽을 끌면 옮겨져요. ⇧ 더하기 · ⌥ 빼기. M으로 다음 방식. Esc로 해제.':TOOLS.find(x=>x[0]==='select')[4]);
 }
 function nextSelMode(){setSelMode(SELMODES[(SELMODES.indexOf(selMode)+1)%SELMODES.length]);toast('선택: '+SELNAME[selMode])}
@@ -3202,9 +3224,9 @@ function setTool(t){
   tool=t;document.querySelectorAll('#tools button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   $('#hint').textContent=TOOLS.find(x=>x[0]===t)[4];
   if(t!=='select'&&poly){poly=null}
-  $('#selModeRow').hidden=t!=='select';$('#selOpRow').hidden=t!=='select';$('#wandRow').hidden=!(t==='select'&&selMode==='wand');if(t==='select')setSelMode(selMode);render();
+  $('#grpSel').hidden=t!=='select';$('#selModeRow').hidden=t!=='select';$('#selOpRow').hidden=t!=='select';$('#wandRow').hidden=!(t==='select'&&selMode==='wand');if(t==='select')setSelMode(selMode);render();
 }
-TOOLS.forEach(([id,label,key])=>{const b=document.createElement('button');b.dataset.t=id;b.title=`${label} (${key})`;b.setAttribute('aria-label',label);b.innerHTML=`${svgI(id)}<kbd>${key}</kbd>`;
+TOOLS.forEach(([id,label,key])=>{const b=document.createElement('button');b.dataset.t=id;b.dataset.tip=`${label} (${key})`;b.setAttribute('aria-label',label);b.innerHTML=svgI(id);
   b.onclick=()=>{if(id==='select'&&tool==='select')nextSelMode();else setTool(id);if(id==='transform'&&!xf)startXf()};$('#tools').append(b)});
 $('#smRect').onclick=()=>setSelMode('rect');$('#smLasso').onclick=()=>setSelMode('lasso');$('#smPoly').onclick=()=>setSelMode('poly');$('#smWand').onclick=()=>setSelMode('wand');
 $('#color').oninput=e=>setColor(e.target.value);
