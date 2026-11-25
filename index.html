@@ -242,6 +242,12 @@ footer button{padding:2px 8px}
 .lbtns svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lbtns .lsep{width:1px;height:20px;background:var(--line);margin:0 2px}
 #tip{position:fixed;z-index:30;max-width:240px;padding:5px 9px;border-radius:6px;background:#111;color:#f2f2f2;font-size:12px;line-height:1.4;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.5);white-space:normal}
+#ctxMenu{position:fixed;z-index:31;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;min-width:210px;box-shadow:0 12px 32px rgba(0,0,0,.55);display:flex;flex-direction:column}
+#ctxMenu button{display:flex;justify-content:space-between;gap:18px;background:none;border:0;border-radius:6px;padding:6px 10px;text-align:left}
+#ctxMenu button:hover:not(:disabled),#ctxMenu button:focus-visible{background:var(--accent);color:var(--accent-ink);outline:none}
+#ctxMenu button:hover:not(:disabled) kbd{color:var(--accent-ink)}
+#ctxMenu kbd{border:0;font-size:11px}
+#ctxMenu hr{border:0;border-top:1px solid var(--line);margin:4px 3px}
 /* 미리보기 창 (PIP) */
 #pip{position:fixed;z-index:9;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.55);overflow:hidden}
 #pipBar{display:flex;align-items:center;gap:4px;padding:4px 6px 4px 10px;border-bottom:1px solid var(--line);cursor:move;touch-action:none}
@@ -320,7 +326,7 @@ footer button{padding:2px 8px}
   <div class="row" id="ppNote" style="margin-top:-4px;color:var(--muted);font-size:11px" hidden>굵기 1인 연필·지우개에서만 적용돼요</div>
   <div class="row"><span>대칭</span><select id="symSel" style="flex:1;min-width:0" title="그린 점을 거울처럼 같이 찍어요">
     <option value="none">끔</option><option value="h">좌우</option><option value="v">상하</option><option value="hv">좌우 + 상하</option>
-    <option value="d1">대각선 ↘</option><option value="d2">대각선 ↙</option><option value="dd">대각선 둘 다</option><option value="all">전부 (8방향)</option></select></div>
+    <option value="d1">대각선 ↘</option><option value="d2">대각선 ↙</option><option value="dd">대각선 둘 다</option><option value="all">전부 (8방향)</option></select><button id="symReset" data-tip="대칭축을 가운데로 (손잡이 두 번 클릭과 같아요)" aria-label="대칭축 가운데로" hidden style="padding:4px 8px">가운데로</button></div>
   <div class="row" style="margin-bottom:3px"><span>잉크</span></div>
   <div class="row" style="margin-top:0"><div class="seg" id="inkSeg"><button data-v="normal" title="그냥 칠해요">보통</button><button data-v="lock" title="이미 칠해진 곳에만 칠해요 (빈 곳은 안 칠해져요)">알파 잠금</button><button data-v="shade" title="묶음 안의 색을 한 칸 어둡게 / 밝게 바꿔요">셰이딩</button></div></div>
   <div id="shadeBox" hidden>
@@ -349,14 +355,6 @@ footer button{padding:2px 8px}
   <div class="row"><input id="color" type="color" value="#1d2b53"><input id="hex" type="text" maxlength="7" spellcheck="false"></div>
   <div id="palette"></div>
   <div class="row"><button id="bPalAdd" style="flex:1" title="지금 색을 팔레트에 추가. 팔레트 색을 우클릭하면 삭제">＋ 팔레트에 추가</button></div>
-  <h4>선택 영역 / 레이어 편집</h4>
-  <div class="btns">
-    <button id="bCopy">복사</button><button id="bPaste">붙여넣기</button>
-    <button id="bCut">잘라내기</button><button id="bClear">지우기</button>
-    <button id="bFlipH">좌우 뒤집기</button><button id="bFlipV">상하 뒤집기</button>
-    <button id="bSelAll">전체 선택</button><button id="bSelNone">선택 해제</button>
-    <button id="bCropSel" style="grid-column:1/-1" title="선택한 부분만 남기고 캔버스를 잘라요 (모든 레이어·프레임)">선택 영역으로 캔버스 자르기</button>
-  </div>
   <div class="row" id="fingerRow" hidden><label title="끄면 손가락은 화면 이동·확대만, 그리기는 애플펜슬로"><input id="fingerDraw" type="checkbox">손가락으로도 그리기</label></div>
 </aside>
 
@@ -459,6 +457,7 @@ footer button{padding:2px 8px}
 <div id="back" hidden><div id="dlg"></div></div>
 <div id="toast"></div>
 <div id="tip" hidden></div>
+<div id="ctxMenu" role="menu" hidden></div>
 <input id="fOpen" type="file" accept=".pxproj,.json,.aseprite,.ase,image/*" multiple hidden>
 <input id="fImport" type="file" accept=".pxproj,.json,.aseprite,.ase,image/*" multiple hidden>
 
@@ -618,7 +617,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.6';
+const APP_VERSION='2026-11-25.7';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -856,7 +855,7 @@ function refreshAll(){
   $('#bUndo').disabled=hi<=0;$('#bRedo').disabled=hi>=hist.length-1;
   $('#size').textContent=doc.w+' × '+doc.h;
   $('#zoomv').textContent=zoom*100+'%';
-  updateSavedUI();
+  updateSavedUI();symResetUI();
   document.title=(doc.name||'제목없음')+' – 도트공방';
 }
 function refreshLayers(){
@@ -1627,7 +1626,7 @@ function applyMove(m,dx,dy){
 }
 pad.addEventListener('contextmenu',e=>e.preventDefault());
 pad.addEventListener('dblclick',e=>{
-  if(!modalOpen&&sym!=='none'){const h=symHit(e);if(h){if(h.axis==='x')doc.symX=null;else doc.symY=null;scheduleAutosave();render();toast('대칭축을 가운데로 돌렸어요');return}}
+  if(!modalOpen&&sym!=='none'){const h=symHit(e);if(h){if(h.axis==='x')doc.symX=null;else doc.symY=null;scheduleAutosave();symResetUI();render();toast('대칭축을 가운데로 돌렸어요');return}}
   if(tool!=='slice'||modalOpen)return;const h=slcHit(docF(e));if(h)slcProps(h.i)});
 pad.addEventListener('pointerdown',e=>{
   if(modalOpen){
@@ -1643,7 +1642,7 @@ pad.addEventListener('pointerdown',e=>{
   if(tool==='transform'&&e.button===0){startXf();return}
   {const L0=doc.layers[doc.active];if(isTM(L0)&&!tileEdit&&e.button===2&&!(e.metaKey||e.ctrlKey)){pickTile(p);return}}
   const rbShade=e.button===2&&ink==='shade'&&['pencil','line','rect','ellipse','fill'].includes(tool);
-  if(e.button===2&&!rbShade){pick(p);return}
+  if(e.button===2&&!rbShade){if(inSel(p)||tool==='select'||tool==='move'){if(!isGroup(active()))ctxOpen(e.clientX,e.clientY);return}pick(p);return}
   if(e.button!==0&&!rbShade)return;
   shadeDir=rbShade?1:-1;
   if((e.metaKey||e.ctrlKey)&&e.pointerType!=='touch'){const i=layerAt(p);if(i>=0){if(i!==doc.active)setActive(i);toast('레이어 선택: '+doc.layers[i].name)}else toast('그 자리에는 그림이 없어요');return}
@@ -1721,7 +1720,7 @@ function endDrag(){
   if(xfDrag){xfDrag=null;render();return}
   if(!drag)return;
   const d=drag;drag=null;inkBase=null;
-  if(d.t==='sym'){scheduleAutosave();render();return}
+  if(d.t==='sym'){scheduleAutosave();symResetUI();render();return}
   if(d.t==='select'){if(d.op&&d.op!=='set')sel=combineSel(d.prev,d.moved?sel:null,d.op);render();return}
   if(d.t==='lasso'){sel=combineSel(d.prev,lassoToSel(d.pts),d.op||'set');if(sel)$('#coords').textContent=`${sel.w} × ${sel.h}`;render();return}
   if(d.t==='move'&&!d.moved){render();return}
@@ -3215,7 +3214,10 @@ $('#snapBrush').onchange=e=>{snapBrush=e.target.checked;saveSettings();render()}
 $('#fillShape').onchange=e=>fillShape=e.target.checked;
 function setPP(on,say){pixPerfect=!!on;$('#pixPerfect').checked=pixPerfect;$('#ppOff').checked=!pixPerfect;$('#ppNote').hidden=!(pixPerfect&&brush>1);saveSettings();if(say)toast('픽셀 퍼펙트 '+(pixPerfect?'켬 (굵기 1 연필·지우개)':'끔'))}
 $('#ppRow').onchange=e=>{if(e.target.name==='ppMode')setPP(e.target.value==='1',true)};
-$('#symSel').onchange=e=>{sym=e.target.value;saveSettings();render();if(sym!=='none')toast('캔버스 바깥의 파란 삼각형을 끌면 대칭축이 옮겨져요 · 두 번 클릭하면 가운데로');if(sym.startsWith('d')||sym==='all')if(doc.w!==doc.h)toast('대각선 대칭은 정사각형 캔버스에서 가장 정확해요')};
+function symResetUI(){$('#symReset').hidden=sym==='none'||!doc||(doc.symX==null&&doc.symY==null)}
+function symReset(){if(!doc)return;doc.symX=doc.symY=null;scheduleAutosave();symResetUI();render();toast('대칭축을 가운데로 돌렸어요')}
+$('#symReset').onclick=symReset;
+$('#symSel').onchange=e=>{sym=e.target.value;symResetUI();saveSettings();render();if(sym!=='none')toast('캔버스 바깥의 파란 삼각형을 끌면 대칭축이 옮겨져요 · 두 번 클릭하면 가운데로');if(sym.startsWith('d')||sym==='all')if(doc.w!==doc.h)toast('대각선 대칭은 정사각형 캔버스에서 가장 정확해요')};
 function lumHex(h){const[r,g,b]=hexRGB(h);return .299*r+.587*g+.114*b}
 function sortRamp(){shadeRamp=[...new Set(shadeRamp.map(c=>c.toLowerCase()))].sort((a,b)=>lumHex(a)-lumHex(b))}
 function drawShade(){
@@ -3711,16 +3713,14 @@ function setAnim(on,silent){
   if(!silent)toast(on?'애니메이션 타임라인을 켰어요':'애니메이션 타임라인을 껐어요'+(doc&&nF()>1?` (프레임 ${nF()}장은 그대로 있어요)`:''));
 }
 $('#bAnim').onclick=()=>setAnim(!animOn);
-$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bResize').onclick=resizeDialog;$('#bCrop').onclick=()=>cropDialog();$('#bCropSel').onclick=()=>{if(!sel){toast('먼저 선택 도구(M)로 남길 부분을 선택해 주세요');return}cropTo(sel,'선택 영역')};
+$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bResize').onclick=resizeDialog;$('#bCrop').onclick=()=>cropDialog();
 BLENDS.forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;$('#blendSel').append(o)});
 $('#blendSel').onchange=e=>{const l=active();if(isGroup(l))return;l.blend=e.target.value;commit()};
 $('#bTM').onclick=addTilemapLayer;$('#bTiles').onclick=tilesFromImage;$('#tNew').onclick=addBlankTile;$('#tDel').onclick=delTile;$('#tGodot').onclick=godotTileExport;
 $('#tEdit').onchange=e=>{tileEdit=e.target.checked;toast(tileEdit?'타일 고치기 켬: 그리면 같은 타일이 다 같이 바뀌어요':'타일 고치기 끔: 연필로 타일을 찍어요')};
 $('#bGroup').onclick=addGroup;$('#bUngroup').onclick=ungroup;$('#bFLink').onclick=()=>addFrame(true,true);$('#bLink').onclick=linkCels;$('#bUnlink').onclick=unlinkCels;
 $('#bAdd').onclick=addLayer;$('#bDup').onclick=dupLayer;$('#bDel').onclick=delLayer;$('#bMerge').onclick=mergeDown;
-$('#bSelAll').onclick=()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()};$('#bSelNone').onclick=()=>{sel=null;render()};
 $('#bWorks').onclick=()=>worksDialog();$('#bCloud').onclick=()=>cloudSave();
-$('#bCopy').onclick=()=>copySel();$('#bPaste').onclick=pasteClip;$('#bCut').onclick=cutSel;$('#bClear').onclick=clearSel;$('#bFlipH').onclick=()=>flip(true);$('#bFlipV').onclick=()=>flip(false);
 $('#zIn').onclick=()=>setZoom(zoom+Math.max(1,Math.round(zoom/4)));$('#zOut').onclick=()=>setZoom(zoom-Math.max(1,Math.round(zoom/5)));$('#zFit').onclick=fitZoom;$('#z100').onclick=()=>setZoom(1);
 $('#name').onchange=e=>{doc.name=e.target.value.trim()||'제목없음';dirty=true;refreshAll();scheduleAutosave()};
 // 타임라인 버튼
@@ -3773,7 +3773,7 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>대칭 켰을 때</td><td>캔버스 바깥 파란 삼각형 끌기: 대칭축 옮기기 · 두 번 클릭: 가운데로</td></tr>
 <tr><td>⌘0 / ⌘1</td><td>화면에 맞춤 / 실제 크기(100%)</td></tr>
 <tr><td>Space + 끌기</td><td>화면 옮기기</td></tr>
-<tr><td>우클릭</td><td>그 자리 색 가져오기</td></tr>
+<tr><td>우클릭</td><td>그 자리 색 가져오기 · 선택 영역 안·선택/이동 도구·레이어 줄에서는 메뉴 (복사·붙여넣기·지우기·뒤집기·전체 선택·선택 해제·선택 영역으로 자르기)</td></tr>
 <tr><td colspan="2" style="padding-top:8px;color:var(--accent)">애니메이션 (타임라인이 켜져 있을 때)</td></tr>
 <tr><td>, &nbsp; .</td><td>이전 / 다음 프레임</td></tr>
 <tr><td>Home / End</td><td>첫 / 마지막 프레임</td></tr>
@@ -3859,6 +3859,54 @@ pipDragOn($('#pipBar'),(dx,dy,s)=>{PIP.x=s.px+dx;PIP.y=s.py+dy});
 pipDragOn($('#pipGrip'),(dx,dy,s)=>{PIP.w=s.w+dx;PIP.h=s.h+dy});
 addEventListener('resize',()=>{if(!pip.hidden){pipPlace();pipDraw()}});
 pipShow(!!PIP.open);
+
+/* ---------- 우클릭 메뉴 (선택 영역 · 레이어) ---------- */
+function ctxClose(){const m=$('#ctxMenu');if(!m.hidden){m.hidden=true;m.innerHTML=''}}
+function ctxOpen(x,y){
+  if(modalOpen)return;stopPlay();
+  const has=!!sel,items=[
+    ['복사','⌘C',()=>copySel(),true],
+    ['붙여넣기 (새 레이어)','⌘V',pasteClip,!!clip],
+    ['지우기','⌫',clearSel,true],
+    '-',
+    ['좌우 뒤집기','',()=>flip(true),true],
+    ['상하 뒤집기','',()=>flip(false),true],
+    '-',
+    ['전체 선택','⌘A',()=>{sel={x:0,y:0,w:doc.w,h:doc.h};render()},true],
+    ['선택 해제','⌘D',()=>{sel=null;render()},has],
+    '-',
+    ['선택 영역으로 캔버스 자르기','',()=>cropTo(sel,'선택 영역'),has],
+  ];
+  const m=$('#ctxMenu');m.innerHTML='';
+  const note=document.createElement('div');note.className='note';note.style.cssText='padding:2px 10px 4px;margin:0';
+  note.textContent=(has?'선택 영역':'레이어 전체')+' · '+active().name;m.append(note);
+  for(const it of items){
+    if(it==='-'){m.append(document.createElement('hr'));continue}
+    const b=document.createElement('button');b.disabled=!it[3];
+    const t=document.createElement('span');t.textContent=it[0];b.append(t);
+    if(it[1]){const k=document.createElement('kbd');k.textContent=it[1];b.append(k)}
+    b.onclick=()=>{ctxClose();if(xf)applyXf();it[2]()};m.append(b);
+  }
+  m.hidden=false;const r=m.getBoundingClientRect();
+  m.style.left=Math.max(4,Math.min(innerWidth-r.width-4,x))+'px';m.style.top=Math.max(4,Math.min(innerHeight-r.height-4,y))+'px';
+  const first=m.querySelector('button:not(:disabled)');if(first)first.focus({preventScroll:true});
+}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#ctxMenu'))ctxClose()},true);
+$('#ctxMenu').addEventListener('keydown',e=>{
+  const bs=[...$('#ctxMenu').querySelectorAll('button:not(:disabled)')],i=bs.indexOf(document.activeElement);
+  if(e.key==='Escape'){e.preventDefault();ctxClose()}
+  if(e.key==='ArrowDown'){e.preventDefault();bs[(i+1)%bs.length].focus()}
+  if(e.key==='ArrowUp'){e.preventDefault();bs[(i-1+bs.length)%bs.length].focus()}
+  e.stopPropagation();
+});
+addEventListener('blur',ctxClose);
+// 레이어 줄을 우클릭하면 그 레이어를 고르고 메뉴
+$('#layers').addEventListener('contextmenu',e=>{
+  const row=e.target.closest('.layer');if(!row)return;e.preventDefault();
+  const i=+row.dataset.i;if(i!==doc.active)setActive(i);
+  if(isGroup(active())){toast('그룹은 메뉴가 없어요. 그룹 안의 레이어를 우클릭해 주세요');return}
+  ctxOpen(e.clientX,e.clientY);
+});
 
 /* ---------- 말풍선 도움말 (data-tip) ---------- */
 {
