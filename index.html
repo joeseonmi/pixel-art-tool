@@ -350,6 +350,7 @@ footer button{padding:2px 8px}
   <section class="grp" id="grpBrush">
   <h4>브러시</h4>
     <div class="row"><span>굵기</span><input id="brush" type="range" min="1" max="16" value="1"><span id="brushv">1</span></div>
+    <div class="row"><span>모양</span><div class="seg" id="brushShapeSeg"><button data-v="square" data-tip="네모 브러시">네모</button><button data-v="circle" data-tip="동그라미 브러시 (굵기 3부터 둥글어져요)">동그라미</button></div></div>
     <div class="row"><label title="굵기가 4면 그림을 4×4 칸으로 나눠서, 커서가 있는 칸 하나를 통째로 칠해요"><input id="snapBrush" type="checkbox">굵기만큼 칸에 맞추기</label></div>
     <div class="row" id="ppRow" title="연필·지우개(굵기 1)로 그릴 때 ㄱ·ㄴ자로 꺾이는 가운데 점을 자동으로 빼서 선을 부드럽게 이어요"><span>픽셀 퍼펙트</span><label style="flex:none"><input type="radio" name="ppMode" id="ppOff" value="0">끔</label><label style="flex:none"><input type="radio" name="ppMode" id="pixPerfect" value="1">켬</label></div>
     <div class="row" id="ppNote" style="margin-top:-4px;color:var(--muted);font-size:11px" hidden>굵기 1인 연필·지우개에서만 적용돼요</div>
@@ -671,7 +672,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-25.14';
+const APP_VERSION='2026-11-26.1';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -901,8 +902,23 @@ function draw(){
   drawOverlay();
   if(hover&&!drag&&!playing&&!xf){
     const useB=(tool==='pencil'||tool==='eraser'||tool==='line'||(!fillShape&&(tool==='rect'||tool==='ellipse'))),n=useB?brush:1,bo=useB?brushOrigin(hover.x,hover.y):hover;
+    if(useB&&brushShape==='circle'&&n>=3){
+      // 동그라미 브러시: 칠해질 칸들의 바깥 테두리를 그려요
+      const m=brushMask(),on=(i,j)=>i>=0&&j>=0&&i<n&&j<n&&m[j*n+i];
+      vctx.fillStyle='rgba(255,255,255,.18)';
+      for(let j=0;j<n;j++)for(let i=0;i<n;i++)if(on(i,j))vctx.fillRect((bo.x+i)*z,(bo.y+j)*z,z,z);
+      for(const[col,w]of[['rgba(0,0,0,.8)',3],['rgba(255,255,255,.9)',1]]){
+        vctx.strokeStyle=col;vctx.lineWidth=w;vctx.beginPath();
+        for(let j=0;j<n;j++)for(let i=0;i<n;i++){if(!on(i,j))continue;const X=(bo.x+i)*z,Y=(bo.y+j)*z;
+          if(!on(i,j-1)){vctx.moveTo(X,Y);vctx.lineTo(X+z,Y)}if(!on(i,j+1)){vctx.moveTo(X,Y+z);vctx.lineTo(X+z,Y+z)}
+          if(!on(i-1,j)){vctx.moveTo(X,Y);vctx.lineTo(X,Y+z)}if(!on(i+1,j)){vctx.moveTo(X+z,Y);vctx.lineTo(X+z,Y+z)}}
+        vctx.stroke();
+      }
+      vctx.lineWidth=1;
+    }else{
     vctx.lineWidth=1;vctx.strokeStyle='rgba(0,0,0,.8)';vctx.strokeRect(bo.x*z+.5,bo.y*z+.5,n*z-1,n*z-1);
     vctx.strokeStyle='rgba(255,255,255,.9)';vctx.strokeRect(bo.x*z+1.5,bo.y*z+1.5,n*z-3,n*z-3);
+    }
   }
   if(!pvPlaying())drawPreview(doc.frame);
   pipDraw();
@@ -1610,7 +1626,16 @@ function ppDot(l,x,y){
   dot(l.ctx,x,y);
 }
 function brushOrigin(x,y){return snapBrush&&brush>1?{x:Math.floor(x/brush)*brush,y:Math.floor(y/brush)*brush}:{x:x-(brush>>1),y:y-(brush>>1)}}
-function dot(ctx,x,y){const b=brushOrigin(x,y);for(let j=0;j<brush;j++)for(let i=0;i<brush;i++)plot(ctx,b.x+i,b.y+j)}
+// 브러시 모양: 네모 / 동그라미 (칸 안에 들어갈지 미리 계산해 둬요)
+let brushShape='square',_bm={k:'',m:null};
+function brushMask(){
+  const n=brush,k=brushShape+n;if(_bm.k===k)return _bm.m;
+  const m=new Uint8Array(n*n);
+  if(brushShape!=='circle'||n<3)m.fill(1);
+  else{const c=n/2,rr=(c-.25)**2;for(let j=0;j<n;j++)for(let i=0;i<n;i++){const dx=i+.5-c,dy=j+.5-c;m[j*n+i]=dx*dx+dy*dy<=rr?1:0}}
+  _bm={k,m};return m;
+}
+function dot(ctx,x,y){const b=brushOrigin(x,y),m=brushMask(),n=brush;for(let j=0;j<n;j++)for(let i=0;i<n;i++)if(m[j*n+i])plot(ctx,b.x+i,b.y+j)}
 function bres(x0,y0,x1,y1,fn){
   const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;
   for(;;){fn(x0,y0);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}
@@ -3268,6 +3293,8 @@ $('#smRect').onclick=()=>setSelMode('rect');$('#smLasso').onclick=()=>setSelMode
 $('#color').oninput=e=>setColor(e.target.value);
 $('#hex').onchange=e=>{let v=e.target.value.trim();if(v[0]!=='#')v='#'+v;if(/^#[0-9a-f]{6}$/i.test(v))setColor(v);else e.target.value=color};
 $('#bPalAdd').onclick=()=>{if(!palette.includes(color)){palette.push(color);drawPalette();scheduleAutosave()}};
+function setBrushShape(v){brushShape=v==='circle'?'circle':'square';document.querySelectorAll('#brushShapeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===brushShape));saveSettings();render()}
+$('#brushShapeSeg').onclick=e=>{const b=e.target.closest('button');if(b)setBrushShape(b.dataset.v)};
 $('#brush').oninput=e=>{brush=+e.target.value;$('#brushv').textContent=brush;$('#ppNote').hidden=!(pixPerfect&&brush>1);render()};
 $('#snapBrush').onchange=e=>{snapBrush=e.target.checked;saveSettings();render()};
 $('#fillShape').onchange=e=>fillShape=e.target.checked;
@@ -3819,8 +3846,8 @@ $('#onPrev').onchange=e=>{onion.prev=Math.max(0,Math.min(5,+e.target.value|0));e
 $('#onNext').onchange=e=>{onion.next=Math.max(0,Math.min(5,+e.target.value|0));e.target.value=onion.next;saveSettings();render()};
 $('#onTint').onchange=e=>{onion.tint=e.target.checked;saveSettings();render()};
 $('#pvPlay').onchange=()=>{pvSeqI=0;pvTick()};$('#pvZoom').onchange=()=>{pvTick();render()};
-function saveSettings(){try{localStorage.setItem('pixelart-tool-anim-settings',JSON.stringify({onion,animOn,exportScale,grid,autoXf,fingerDraw,snapBrush,pixPerfect,sym,ink,shadeRamp,gradStops,gradDither,gradShape}))}catch(e){}}
-function loadSettings(){try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(Array.isArray(s.gradStops))gradStops=s.gradStops.filter(c=>c==='transparent'||/^#[0-9a-f]{6}$/i.test(c));if(s.gradDither in DITHERS)gradDither=s.gradDither;if(['linear','radial'].includes(s.gradShape))gradShape=s.gradShape;if(s.onion)Object.assign(onion,s.onion);animOn=!!s.animOn;if([1,2,4,8,16].includes(s.exportScale))exportScale=s.exportScale;if(s.grid)Object.assign(grid,s.grid);if(typeof s.autoXf==='boolean')autoXf=s.autoXf;snapBrush=!!s.snapBrush;if(typeof s.fingerDraw==='boolean')fingerDraw=s.fingerDraw}catch(e){}
+function saveSettings(){try{localStorage.setItem('pixelart-tool-anim-settings',JSON.stringify({onion,animOn,exportScale,grid,autoXf,fingerDraw,snapBrush,pixPerfect,sym,ink,shadeRamp,gradStops,gradDither,gradShape,brushShape}))}catch(e){}}
+function loadSettings(){try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(s.brushShape==='circle')brushShape='circle';if(Array.isArray(s.gradStops))gradStops=s.gradStops.filter(c=>c==='transparent'||/^#[0-9a-f]{6}$/i.test(c));if(s.gradDither in DITHERS)gradDither=s.gradDither;if(['linear','radial'].includes(s.gradShape))gradShape=s.gradShape;if(s.onion)Object.assign(onion,s.onion);animOn=!!s.animOn;if([1,2,4,8,16].includes(s.exportScale))exportScale=s.exportScale;if(s.grid)Object.assign(grid,s.grid);if(typeof s.autoXf==='boolean')autoXf=s.autoXf;snapBrush=!!s.snapBrush;if(typeof s.fingerDraw==='boolean')fingerDraw=s.fingerDraw}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('pixelart-tool-anim-settings')||'{}');if(typeof s.pixPerfect==='boolean')pixPerfect=s.pixPerfect;if(SYMS[s.sym])sym=s.sym;if(Array.isArray(s.shadeRamp))shadeRamp=s.shadeRamp.filter(c=>/^#[0-9a-f]{6}$/i.test(c));if(['normal','lock','shade'].includes(s.ink))ink=s.ink}catch(e){}
   try{$('#pixPerfect').checked=pixPerfect;$('#ppOff').checked=!pixPerfect;$('#symSel').value=sym;drawShade();setInk(ink)}catch(e){}
   $('#autoXf').checked=autoXf;$('#snapBrush').checked=snapBrush;refreshGridUI();
@@ -4155,7 +4182,7 @@ async function checkUpdate(){
 
 /* ---------- 시작 ---------- */
 (async()=>{
-  loadSettings();setAnim(animOn,true);setColor(color);setTool('pencil');
+  loadSettings();document.querySelectorAll('#brushShapeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===brushShape));setAnim(animOn,true);setColor(color);setTool('pencil');
   let opened=false;
   try{
     const all=await wAll();
