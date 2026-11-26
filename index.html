@@ -272,6 +272,18 @@ footer button{padding:2px 8px}
 #ctxMenu button:hover:not(:disabled) kbd{color:var(--accent-ink)}
 #ctxMenu kbd{border:0;font-size:11px}
 #ctxMenu hr{border:0;border-top:1px solid var(--line);margin:4px 3px}
+/* 레퍼런스 창 */
+#refWin{position:fixed;z-index:9;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.55);overflow:hidden}
+#refWin.drop{outline:3px dashed var(--accent);outline-offset:-3px}
+#refBar{display:flex;align-items:center;gap:3px;padding:4px 6px 4px 10px;border-bottom:1px solid var(--line);cursor:move;touch-action:none}
+#refName{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#refBar button{padding:1px 6px;font-size:11px;min-width:24px}
+#refBody{flex:1;min-height:0;position:relative;background:#1e1e1e;touch-action:none}
+#refC{position:absolute;inset:0;width:100%;height:100%}
+#refEmpty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--muted);font-size:12px;line-height:1.6;pointer-events:none}
+#refInfo{position:absolute;left:6px;bottom:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:0 5px;border-radius:4px;pointer-events:none}
+#refGrip{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 55%,#6a6a6a 55%,#6a6a6a 62%,transparent 62%,transparent 72%,#6a6a6a 72%,#6a6a6a 79%,transparent 79%)}
+#bRef.on{background:var(--accent);color:var(--accent-ink)}
 /* 미리보기 창 (PIP) */
 #pip{position:fixed;z-index:9;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.55);overflow:hidden}
 #pipBar{display:flex;align-items:center;gap:4px;padding:4px 6px 4px 10px;border-bottom:1px solid var(--line);cursor:move;touch-action:none}
@@ -313,6 +325,7 @@ footer button{padding:2px 8px}
   <button id="bWorks" title="이 기기에 저장된 작업 목록 · GitHub 동기화">내 작업</button>
   <button id="bCloud" title="GitHub에 올리고 다른 기기 것 받기 (⌘S)">☁ 저장</button>
   <button id="bAnim" title="애니메이션 타임라인 켜기/끄기 (⇧T)">애니메이션</button>
+  <button id="bRef" title="레퍼런스 그림을 띄워 놓고 보면서 그리기 (F8)">레퍼런스</button>
   <button id="bPip" title="작게 보면 어떤지 따로 띄워서 보기 (F7)">미리보기 창</button>
   <button id="bPixelize" title="AI로 뽑은 픽셀아트풍 그림을 진짜 픽셀아트로 바꿔요 (⇧P)">픽셀아트 변환</button>
   <span class="sep"></span>
@@ -500,6 +513,16 @@ footer button{padding:2px 8px}
   <div class="row">색 <input id="gCol" type="color" style="width:40px;height:26px;padding:0;border:1px solid var(--line);border-radius:5px;background:none"> 진하기 <input id="gA" type="range" min="10" max="100"></div>
   <div class="row" style="color:var(--muted);font-size:11px">마름모는 아이소메트릭 맵용이에요. 보통 가로가 세로의 2배 (32×16, 64×32).</div>
 </div>
+<div id="refWin" hidden>
+  <div id="refBar"><span id="refName" title="끌어서 옮기기">레퍼런스</span>
+    <button id="refPrev" data-tip="이전 그림" hidden>◀</button><button id="refNext" data-tip="다음 그림" hidden>▶</button>
+    <button id="refFlip" data-tip="좌우 반전해서 보기">반전</button><button id="refGray" data-tip="흑백으로 보기 (명암 확인)">흑백</button>
+    <button id="refAdd" data-tip="그림 넣기 (창에 끌어다 놓아도 돼요)">＋</button><button id="refDel" data-tip="지금 그림 빼기">🗑</button>
+    <button id="refClose" data-tip="닫기 (F8)">×</button></div>
+  <div id="refBody"><canvas id="refC"></canvas><div id="refEmpty">＋ 를 누르거나<br>그림 파일을 여기에 끌어다 놓으세요</div><span id="refInfo"></span></div>
+  <div id="refGrip" title="끌어서 크기 바꾸기"></div>
+  <input id="refFile" type="file" accept="image/*" multiple hidden>
+</div>
 <div id="pip" hidden>
   <div id="pipBar"><b title="끌어서 옮기기">미리보기</b>
     <button id="pipPlay" title="애니메이션 재생 / 멈춤" hidden>▶</button>
@@ -672,7 +695,7 @@ async function desktopMode(D){
 </script>
 <script>
 'use strict';
-const APP_VERSION='2026-11-26.1';
+const APP_VERSION='2026-11-26.2';
 const $=s=>document.querySelector(s);
 const MAX=1024, AUTOSAVE='pixelart-tool-anim-autosave', OLD_AUTOSAVE='pixelart-tool-autosave';
 const TOOLS=[
@@ -3872,6 +3895,7 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>⇧⌘S / ⌘O</td><td>.pxproj 파일로 저장 / 파일 열기</td></tr>
 <tr><td>⇧B</td><td>마네킹 꺼내기</td></tr>
 <tr><td>⇧T</td><td>애니메이션 타임라인 켜기 / 끄기</td></tr>
+<tr><td>F8</td><td>레퍼런스 창 켜기 / 끄기 · 창 안: 끌어서 이동 · 휠 확대 · 두 번 클릭 맞춤 · ⌥+클릭(또는 스포이드 도구) 색 가져오기</td></tr>
 <tr><td>F7</td><td>미리보기 창 켜기 / 끄기 (끌어서 옮기기 · 오른쪽 아래 모서리로 크기 · 창 안에서 휠로 배율)</td></tr>
 <tr><td>⇧P</td><td>픽셀아트 변환 (AI 그림 → 진짜 픽셀아트)</td></tr>
 <tr><td>⌘C ⌘X ⌘V</td><td>복사 · 잘라내기 · 붙여넣기(새 레이어)</td></tr>
@@ -3894,6 +3918,125 @@ $('#bHelp').onclick=()=>modal('단축키',`<table>
 <tr><td>프레임 두 번 클릭</td><td>프레임 시간 바꾸기</td></tr>
 <tr><td>태그 클릭 / 두 번 클릭</td><td>그 범위만 재생 / 태그 고치기</td></tr>
 </table><div style="color:var(--muted);margin-top:8px">Windows에서는 ⌘ 대신 Ctrl을 누르세요.</div>`,[{label:'닫기',value:1,primary:true}]);
+
+/* ---------- 레퍼런스 창 — 그림을 띄워 놓고 보면서 그리기 ---------- */
+const REF_KEY='pxtool-ref-win',refWin=$('#refWin'),refC=$('#refC'),refX=refC.getContext('2d');
+const REFW={open:false,x:null,y:null,w:300,h:340,cur:0,flip:false,gray:false};
+try{Object.assign(REFW,JSON.parse(localStorage.getItem(REF_KEY)||'{}'))}catch(e){}
+let refs=[],refView={s:0,ox:0,oy:0};   // refs: {id,name,img}; s=0 이면 창에 맞춤
+function refSaveWin(){try{localStorage.setItem(REF_KEY,JSON.stringify(REFW))}catch(e){}}
+// 그림은 IndexedDB 에 따로 보관 (앱을 다시 열어도 남아요)
+function refDB(){return new Promise((res,rej)=>{const q=indexedDB.open('pxtool-refs',1);q.onupgradeneeded=()=>q.result.createObjectStore('imgs',{keyPath:'id'});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function refStore(fn){try{const db=await refDB();return await new Promise((res,rej)=>{const tx=db.transaction('imgs','readwrite'),st=tx.objectStore('imgs');const r=fn(st);tx.oncomplete=()=>res(r&&r.result);tx.onerror=()=>rej(tx.error)})}catch(e){return null}}
+function refLoadImg(blob){return new Promise((res,rej)=>{const u=URL.createObjectURL(blob),im=new Image();im.onload=()=>res(im);im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('그림을 열 수 없어요'))};im.src=u})}
+async function refInit(){
+  const all=await refStore(st=>st.getAll());if(!Array.isArray(all))return;
+  all.sort((a,b)=>a.t-b.t);
+  for(const r of all){try{refs.push({id:r.id,name:r.name,img:await refLoadImg(r.blob)})}catch(e){}}
+  REFW.cur=Math.min(REFW.cur,Math.max(0,refs.length-1));refUI();refDraw();
+}
+async function refAdd(files){
+  let n=0;
+  for(const f of files){
+    if(!f.type.startsWith('image/'))continue;
+    try{const img=await refLoadImg(f),id=Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=Date.now()+n;
+      await refStore(st=>st.put({id,name:f.name||'붙여넣은 그림',blob:f,t}));refs.push({id,name:f.name||'붙여넣은 그림',img});n++}catch(e){}
+  }
+  if(!n){toast('그림 파일(PNG·JPG 등)만 넣을 수 있어요');return}
+  REFW.cur=refs.length-1;refView.s=0;refSaveWin();if(refWin.hidden)refShow(true);refUI();refDraw();toast(`레퍼런스 ${n}장을 넣었어요`);
+}
+async function refRemove(){
+  const r=refs[REFW.cur];if(!r)return;
+  await refStore(st=>st.delete(r.id));URL.revokeObjectURL(r.img.src);refs.splice(REFW.cur,1);
+  REFW.cur=Math.max(0,Math.min(REFW.cur,refs.length-1));refView.s=0;refSaveWin();refUI();refDraw();toast('레퍼런스를 뺐어요');
+}
+function refPlace(){
+  const W=innerWidth,H=innerHeight;
+  REFW.w=Math.max(180,Math.min(REFW.w,W-16));REFW.h=Math.max(150,Math.min(REFW.h,H-16));
+  if(REFW.x==null){const r=stage.getBoundingClientRect();REFW.x=r.left+16;REFW.y=r.top+16}
+  REFW.x=Math.max(0,Math.min(W-REFW.w,REFW.x));REFW.y=Math.max(0,Math.min(H-36,REFW.y));
+  Object.assign(refWin.style,{left:REFW.x+'px',top:REFW.y+'px',width:REFW.w+'px',height:REFW.h+'px'});
+}
+function refShow(on){REFW.open=on;refWin.hidden=!on;$('#bRef').classList.toggle('on',on);if(on){refPlace();refUI();refDraw()}refSaveWin()}
+function refUI(){
+  const r=refs[REFW.cur],many=refs.length>1;
+  $('#refName').textContent=r?(many?`${REFW.cur+1}/${refs.length} · `:'')+r.name:'레퍼런스';
+  $('#refPrev').hidden=$('#refNext').hidden=!many;$('#refDel').disabled=!r;
+  $('#refFlip').classList.toggle('on',!!REFW.flip);$('#refGray').classList.toggle('on',!!REFW.gray);
+  $('#refEmpty').hidden=!!r;
+}
+function refFit(){const r=refs[REFW.cur];if(!r)return 1;const b=$('#refBody');return Math.min(b.clientWidth/r.img.naturalWidth,b.clientHeight/r.img.naturalHeight)}
+function refDraw(){
+  if(refWin.hidden)return;
+  const box=$('#refBody'),bw=box.clientWidth,bh=box.clientHeight,dpr=window.devicePixelRatio||1;if(!bw||!bh)return;
+  const cw=Math.round(bw*dpr),ch=Math.round(bh*dpr);if(refC.width!==cw||refC.height!==ch){refC.width=cw;refC.height=ch}
+  const x=refX;x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,cw,ch);
+  const r=refs[REFW.cur];if(!r)return;
+  const im=r.img,s=refView.s||refFit(),w=im.naturalWidth*s,h=im.naturalHeight*s;
+  if(!refView.s){refView.ox=(bw-w)/2;refView.oy=(bh-h)/2}
+  x.setTransform(dpr,0,0,dpr,0,0);x.imageSmoothingEnabled=s<2;
+  x.filter=REFW.gray?'grayscale(1)':'none';
+  if(REFW.flip){x.translate(refView.ox+w,refView.oy);x.scale(-1,1);x.drawImage(im,0,0,w,h)}else x.drawImage(im,refView.ox,refView.oy,w,h);
+  x.filter='none';
+  $('#refInfo').textContent=Math.round(s*100)+'%';
+}
+// 레퍼런스에서 색 가져오기: ⌥+클릭, 또는 스포이드 도구일 때 클릭
+function refPick(e){
+  const r=refs[REFW.cur];if(!r)return;
+  const b=$('#refBody').getBoundingClientRect(),s=refView.s||refFit();
+  let ix=(e.clientX-b.left-refView.ox)/s,iy=(e.clientY-b.top-refView.oy)/s;
+  if(REFW.flip)ix=r.img.naturalWidth-ix;
+  ix=Math.floor(ix);iy=Math.floor(iy);if(ix<0||iy<0||ix>=r.img.naturalWidth||iy>=r.img.naturalHeight)return;
+  const c=document.createElement('canvas');c.width=c.height=1;const cx=c.getContext('2d');cx.drawImage(r.img,ix,iy,1,1,0,0,1,1);
+  const d=cx.getImageData(0,0,1,1).data;if(d[3]<8){toast('투명한 곳이에요');return}
+  setColor(rgbHex(d[0],d[1],d[2]));toast('레퍼런스에서 '+color+' 을(를) 가져왔어요');
+}
+const refBody=$('#refBody');
+refBody.addEventListener('pointerdown',e=>{
+  if(e.button!==0||!refs[REFW.cur])return;e.preventDefault();
+  if(e.altKey||tool==='picker'){refPick(e);return}
+  if(!refView.s){refView.s=refFit()}
+  const sx=e.clientX,sy=e.clientY,ox=refView.ox,oy=refView.oy;refBody.style.cursor='grabbing';
+  const mv=ev=>{refView.ox=ox+ev.clientX-sx;refView.oy=oy+ev.clientY-sy;refDraw()};
+  const up=()=>{refBody.style.cursor='';removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};
+  addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+});
+refBody.addEventListener('wheel',e=>{
+  e.preventDefault();if(!refs[REFW.cur])return;
+  const b=refBody.getBoundingClientRect(),mx=e.clientX-b.left,my=e.clientY-b.top,s0=refView.s||refFit();
+  if(!refView.s)refView.s=s0;
+  const s1=Math.max(.05,Math.min(32,s0*(e.deltaY<0?1.15:1/1.15)));
+  refView.ox=mx-(mx-refView.ox)*s1/s0;refView.oy=my-(my-refView.oy)*s1/s0;refView.s=s1;refDraw();
+},{passive:false});
+refBody.addEventListener('dblclick',()=>{refView.s=0;refDraw()});
+refBody.addEventListener('mousemove',e=>{refBody.style.cursor=(e.altKey||tool==='picker')&&refs[REFW.cur]?'crosshair':''});
+// 창에 그림 파일을 끌어다 놓기
+refWin.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();refWin.classList.add('drop')});
+refWin.addEventListener('dragleave',()=>refWin.classList.remove('drop'));
+refWin.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();refWin.classList.remove('drop');dragDepth=0;stage.classList.remove('drop');if(e.dataTransfer.files.length)refAdd([...e.dataTransfer.files])});
+$('#refFile').onchange=e=>{refAdd([...e.target.files]);e.target.value=''};
+$('#refAdd').onclick=()=>$('#refFile').click();
+$('#refDel').onclick=refRemove;
+$('#refPrev').onclick=()=>{REFW.cur=(REFW.cur-1+refs.length)%refs.length;refView.s=0;refSaveWin();refUI();refDraw()};
+$('#refNext').onclick=()=>{REFW.cur=(REFW.cur+1)%refs.length;refView.s=0;refSaveWin();refUI();refDraw()};
+$('#refFlip').onclick=()=>{REFW.flip=!REFW.flip;refSaveWin();refUI();refDraw()};
+$('#refGray').onclick=()=>{REFW.gray=!REFW.gray;refSaveWin();refUI();refDraw()};
+$('#refClose').onclick=()=>refShow(false);
+$('#bRef').onclick=()=>refShow(refWin.hidden);
+function refDragOn(el,onMove){
+  el.addEventListener('pointerdown',e=>{
+    if(e.button!==0||e.target.closest('button,select,input'))return;e.preventDefault();e.stopPropagation();
+    const s={x:e.clientX,y:e.clientY,px:REFW.x,py:REFW.y,w:REFW.w,h:REFW.h};
+    const mv=ev=>{onMove(ev.clientX-s.x,ev.clientY-s.y,s);refPlace();refDraw()};
+    const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);refSaveWin()};
+    addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+  });
+}
+refDragOn($('#refBar'),(dx,dy,s)=>{REFW.x=s.px+dx;REFW.y=s.py+dy});
+refDragOn($('#refGrip'),(dx,dy,s)=>{REFW.w=s.w+dx;REFW.h=s.h+dy});
+addEventListener('resize',()=>{if(!refWin.hidden){refPlace();refDraw()}});
+new ResizeObserver(()=>refDraw()).observe(refBody);
+refShow(!!REFW.open);refInit();
 
 /* ---------- 미리보기 창 (PIP) — 작게 봤을 때 어떤지 바로 확인 ---------- */
 const PIP_KEY='pxtool-pip',pip=$('#pip'),pipC=$('#pipC'),pipX=pipC.getContext('2d');
@@ -4133,6 +4276,7 @@ window.addEventListener('keydown',e=>{
   if(mod&&e.code==='KeyS'){e.preventDefault();e.shiftKey?saveAs():cloudSave();return}
   if(typing||tag==='SELECT')return;
   if(e.key==='F7'){e.preventDefault();pipShow(pip.hidden);return}
+  if(e.key==='F8'){e.preventDefault();refShow(refWin.hidden);return}
   if(e.altKey&&!mod&&(e.code==='BracketLeft'||e.code==='BracketRight')){e.preventDefault();if(tabs.length>1)switchTab((cur+(e.code==='BracketRight'?1:-1)+tabs.length)%tabs.length);return}
   if(e.altKey&&!mod&&e.code==='KeyW'){e.preventDefault();closeTab(cur);return}
   if(e.altKey&&!mod&&/^Digit[1-9]$/.test(e.code)){e.preventDefault();switchTab(+e.code.slice(5)-1);return}
